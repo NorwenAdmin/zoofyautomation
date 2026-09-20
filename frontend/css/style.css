@@ -150,3 +150,8 @@ a {
   text-align: center;
   margin-top: 40px;
 }
+
+#map {
+  height: 75vh;
+  border-radius: 8px;
+}
