@@ -70,3 +70,4 @@ Backend TestMind (приём ingest, AI-анализ, Failure Investigation Agen
 - [x] Тестовые credentials для логина — уже есть (`kosty31@gmail.com` / см. память `project-zoofyautomation`)
 - [ ] `ANTHROPIC_API_KEY` — нужен только для US-8, не блокирует US-1–US-7
 - [ ] GitHub secrets `TESTMIND_INGEST_URL`/`TESTMIND_API_KEY` — нужны только для US-9, можно позже
+
