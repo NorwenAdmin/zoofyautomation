@@ -5,8 +5,8 @@
 ## Решено: порядок работ
 Фундамент первым — US-1 + US-2 + US-3 + US-4, только для `subscription_invoices`. Готово и проверено (2026-09-20), см. ниже. Остальные ресурсы (`appointments`, `facturen`) и CI (US-5–US-9) — по мере продолжения.
 
-## Git
-`git init` сделан в `zoofyautomation` (2026-09-20), `.gitignore` добавлен (`.venv`, `node_modules`, `.env`, `uploads/`, `test-results/`, `playwright-report/`). Коммитов пока нет — GitHub-репозиторий и push ещё не делали (не нужны для US-1–US-4, понадобятся для US-7/US-8).
+## Git — ✅ ГОТОВО
+`git init` + `.gitignore` (`.venv`, `node_modules`, `.env`, `uploads/`, `test-results/`, `playwright-report/`) + приватный репозиторий [github.com/NorwenAdmin/zoofyautomation](https://github.com/NorwenAdmin/zoofyautomation), запушено в `main`. По пути нашли и убрали захардкоженный продакшен-пароль из `tests/env.ts` (он там был при первой версии) — вынесли в `tests/.env` (gitignored) + `tests/.env.example` (шаблон, закоммичен). Готово к US-7 (CI) когда дойдём.
 
 ## US-1. Контракт из кода, не руками — ✅ ГОТОВО
 Как QA-инженер, хочу, чтобы контракт API брался из самого FastAPI (`/openapi.json`), а не писался вручную, чтобы тесты никогда не расходились с реальной реализацией.

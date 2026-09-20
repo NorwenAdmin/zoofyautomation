@@ -1,0 +1,42 @@
+name: Update contract snapshot
+
+# Manual, deliberate step — run this after merging a generate-tests.yml PR AND confirming the
+# corresponding change is actually deployed to https://zoofyautomation.norwen.nl. Never runs
+# automatically, since a deploy here happens out-of-band (deploy/deploy.sh from a developer's
+# machine), not as a result of a git push — an automatic snapshot update on push could capture
+# the wrong baseline before the deploy actually lands.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update-snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install test dependencies
+        working-directory: tests
+        run: npm ci
+
+      - name: Snapshot the live OpenAPI contract
+        working-directory: tests
+        run: npm run snapshot-openapi -- https://zoofyautomation.norwen.nl
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add tests/contracts/openapi-snapshot.json
+          if git diff --cached --quiet; then
+            echo "Snapshot already up to date."
+            exit 0
+          fi
+          git commit -m "Update OpenAPI contract snapshot"
+          git push origin main

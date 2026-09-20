@@ -8,7 +8,11 @@ import { LIVE_BASE_URL, MOCK_BASE_URL } from "./env.js";
 export default defineConfig({
   testDir: ".",
   fullyParallel: false,
-  reporter: [["list"], ["json", { outputFile: "test-results/results.json" }]],
+  reporter: [
+    ["list"],
+    ["json", { outputFile: "test-results/results.json" }],
+    ["html", { outputFolder: "playwright-report", open: "never" }],
+  ],
   projects: [
     {
       name: "mock",

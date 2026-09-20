@@ -1,0 +1,31 @@
+name: Contract tests (mock)
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-mock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install test dependencies
+        working-directory: tests
+        run: npm ci
+
+      - name: Run contract tests against the throwaway mock stack
+        working-directory: tests
+        run: npm run test:mock
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-mock
+          path: tests/playwright-report/
+          retention-days: 14

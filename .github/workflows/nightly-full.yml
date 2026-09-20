@@ -1,0 +1,46 @@
+name: Nightly full test run
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  mock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - working-directory: tests
+        run: npm ci
+      - working-directory: tests
+        run: npm run test:mock
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-nightly-mock
+          path: tests/playwright-report/
+          retention-days: 14
+
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - working-directory: tests
+        run: npm ci
+      - working-directory: tests
+        env:
+          LIVE_OWNER_EMAIL: ${{ secrets.LIVE_OWNER_EMAIL }}
+          LIVE_OWNER_PASSWORD: ${{ secrets.LIVE_OWNER_PASSWORD }}
+        run: npm run test:live
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-nightly-live
+          path: tests/playwright-report/
+          retention-days: 14
