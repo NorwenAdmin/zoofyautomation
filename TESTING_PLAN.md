@@ -67,10 +67,14 @@
 - [x] `.github/workflows/update-snapshot.yml` (не было в исходном AC, добавлено по необходимости) — ручной workflow, обновляет снепшот после мержа + подтверждённого деплоя; реально прогнан, no-op когда снепшот уже актуален
 - [x] Найден и исправлен реальный баг: многострочный `--body` в `generate-tests.yml` ломал YAML-отступы block scalar — заменили на однострочный `$'...\n...'`
 
-## US-9. Отправка результатов во внешний сервис
+## US-9. Отправка результатов во внешний сервис — ✅ ГОТОВО, проверено на реальном TestMind (2026-09-20)
 Как QA-инженер, хочу, чтобы результаты тестов уходили во внешний ingest-эндпоинт, чтобы AI-анализ и дашборд жили отдельно от этого репозитория.
 - AC: после прогона скрипт парсит JSON-репортер Playwright и шлёт `POST` на `TESTMIND_INGEST_URL` с заголовком `X-API-Key: TESTMIND_API_KEY` (оба — GitHub secrets). Этот репозиторий не знает, как результаты анализируются — только отправляет.
-- **Нужны:** GitHub secrets `TESTMIND_INGEST_URL`/`TESTMIND_API_KEY` — можно добавить позже, US-9 просто не активна до этого.
+- [x] GitHub secrets `TESTMIND_INGEST_URL` (`https://testmind.norwen.nl/api/runs/ingest`), `TESTMIND_API_KEY` — получены и сохранены
+- [x] Контракт `RunIngestIn`/`TestResultIn` взят не на глаз, а с реального `https://testmind.norwen.nl/openapi.json` — `{ target, results: [{ scenario_name, category, method, path, expected_status, actual_status, passed, latency_ms, error_message, request_body, response_body }] }`
+- [x] `tests/scripts/send-results.ts` — парсит Playwright JSON-репортер (`test-results/results.json`). Playwright не знает про method/path/expected_status (это наша семантика, не его) — выводятся эвристикой из уже устоявшихся соглашений: `test.describe("Contract: <path>")` → path, тесты называются `"POST ..."`/`"GET ..."` → method, код статуса в названии (`"...rejected with 422"`) → expected_status, иначе дефолт 200. Skipped-тесты (наш `test.skip(!op, ...)` паттерн) не отправляются — это не результат, а "ещё не применимо"
+- [x] Вшито в `test-mock.yml`/`test-live.yml`/`nightly-full.yml` (mock и live job'ы) как шаг `if: always()` — падения тоже репортятся, не только успехи
+- [x] **Проверено end-to-end дважды**: локальный ручной запуск (16/16) и реальный CI-прогон `nightly-full.yml` (mock 16/16, live 3/3×2) — все появились в `GET /api/runs` на TestMind с правильными счётчиками
 
 ## Вне скоупа этого репозитория/чата
 Backend TestMind (приём ingest, AI-анализ, Failure Investigation Agent, LLM-judge, eval-слой), Vue-дашборд — отдельный проект/чат.
