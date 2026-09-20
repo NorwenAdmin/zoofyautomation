@@ -43,9 +43,19 @@ async def compare_bookkeeping(db: AsyncSession = Depends(get_db), _current_user=
     so n8n can flag invoices Zoofy issued that the accountant hasn't entered yet. Matches on
     factuur/invoice_number, factuur/file_name, or kenmerk/invoice_number — Kees's invoice_number
     sometimes actually holds the Kenmerk value instead of the real invoice number, and file_name
-    stays factuur-shaped even then, so no single field pairing is reliable on its own."""
-    facturen = (await db.execute(select(Factuur))).scalars().all()
-    entries = (await db.execute(select(BookkeepingEntry))).scalars().all()
+    stays factuur-shaped even then, so no single field pairing is reliable on its own.
+    Both sides are sorted by date descending (most recent first) so the frontend's two lists
+    don't come back in arbitrary insertion order."""
+    facturen = (
+        (await db.execute(select(Factuur).order_by(Factuur.factuurdatum.desc().nulls_last())))
+        .scalars()
+        .all()
+    )
+    entries = (
+        (await db.execute(select(BookkeepingEntry).order_by(BookkeepingEntry.invoice_date.desc().nulls_last())))
+        .scalars()
+        .all()
+    )
 
     def matches(f: Factuur, e: BookkeepingEntry) -> bool:
         if e.invoice_number and f.factuur == e.invoice_number:
