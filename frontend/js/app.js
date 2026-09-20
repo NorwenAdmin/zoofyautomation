@@ -11,6 +11,10 @@ const appointmentsEmpty = document.getElementById("appointments-empty");
 const facturenBody = document.getElementById("facturen-body");
 const facturenEmpty = document.getElementById("facturen-empty");
 const mapEmpty = document.getElementById("map-empty");
+const missingInBookkeepingBody = document.getElementById("missing-in-bookkeeping-body");
+const missingInBookkeepingEmpty = document.getElementById("missing-in-bookkeeping-empty");
+const missingInFacturenBody = document.getElementById("missing-in-facturen-body");
+const missingInFacturenEmpty = document.getElementById("missing-in-facturen-empty");
 
 const tabButtons = document.querySelectorAll(".tab-btn");
 const tabPanels = {
@@ -18,6 +22,7 @@ const tabPanels = {
   appointments: document.getElementById("tab-appointments"),
   facturen: document.getElementById("tab-facturen"),
   map: document.getElementById("tab-map"),
+  bookkeeping: document.getElementById("tab-bookkeeping"),
 };
 
 let leafletMap = null;
@@ -177,6 +182,40 @@ async function loadMap() {
   }, 0);
 }
 
+async function loadBookkeepingCompare() {
+  const { missing_in_bookkeeping, missing_in_facturen } = await api("/api/bookkeeping/compare");
+
+  missingInBookkeepingBody.innerHTML = "";
+  missingInBookkeepingEmpty.hidden = missing_in_bookkeeping.length > 0;
+  for (const row of missing_in_bookkeeping) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${row.factuur}</td>
+      <td>${row.kenmerk || ""}</td>
+      <td>${row.klant || ""}</td>
+      <td>${formatAmount(row.totaal)}</td>
+      <td>${formatDate(row.factuurdatum)}</td>
+      <td>${row.thread_link ? `<a href="${row.thread_link}" target="_blank">Открыть</a>` : ""}</td>
+    `;
+    missingInBookkeepingBody.appendChild(tr);
+  }
+
+  missingInFacturenBody.innerHTML = "";
+  missingInFacturenEmpty.hidden = missing_in_facturen.length > 0;
+  for (const row of missing_in_facturen) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${row.invoice_number || ""}</td>
+      <td>${row.file_name || ""}</td>
+      <td>${row.customer_name || ""}</td>
+      <td>${formatAmount(row.amount_incl)}</td>
+      <td>${formatDate(row.invoice_date)}</td>
+      <td>${row.state || ""}</td>
+    `;
+    missingInFacturenBody.appendChild(tr);
+  }
+}
+
 function switchTab(name) {
   for (const btn of tabButtons) {
     btn.classList.toggle("active", btn.dataset.tab === name);
@@ -185,6 +224,7 @@ function switchTab(name) {
     panel.hidden = key !== name;
   }
   if (name === "map") loadMap();
+  if (name === "bookkeeping") loadBookkeepingCompare();
 }
 
 for (const btn of tabButtons) {

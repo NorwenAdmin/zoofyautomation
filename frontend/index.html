@@ -29,6 +29,7 @@
       <button class="tab-btn" data-tab="appointments">График работ</button>
       <button class="tab-btn" data-tab="facturen">Facturen</button>
       <button class="tab-btn" data-tab="map">Карта</button>
+      <button class="tab-btn" data-tab="bookkeeping">Бухгалтерия</button>
     </nav>
     <main>
       <section id="tab-subscriptions" class="tab-panel">
@@ -91,6 +92,40 @@
       <section id="tab-map" class="tab-panel" hidden>
         <div id="map"></div>
         <p id="map-empty" class="empty-state" hidden>Пока нет адресов с координатами.</p>
+      </section>
+
+      <section id="tab-bookkeeping" class="tab-panel" hidden>
+        <h2>Выставлено, но нет у бухгалтера</h2>
+        <table id="missing-in-bookkeeping-table">
+          <thead>
+            <tr>
+              <th>Factuur</th>
+              <th>Kenmerk</th>
+              <th>Klant</th>
+              <th>Totaal</th>
+              <th>Factuurdatum</th>
+              <th>Письмо</th>
+            </tr>
+          </thead>
+          <tbody id="missing-in-bookkeeping-body"></tbody>
+        </table>
+        <p id="missing-in-bookkeeping-empty" class="empty-state" hidden>Расхождений нет.</p>
+
+        <h2>Есть у бухгалтера, но нет у нас</h2>
+        <table id="missing-in-facturen-table">
+          <thead>
+            <tr>
+              <th>Invoice Nr</th>
+              <th>File Name</th>
+              <th>Klant</th>
+              <th>Сумма</th>
+              <th>Дата</th>
+              <th>Статус</th>
+            </tr>
+          </thead>
+          <tbody id="missing-in-facturen-body"></tbody>
+        </table>
+        <p id="missing-in-facturen-empty" class="empty-state" hidden>Расхождений нет.</p>
       </section>
     </main>
   </div>
