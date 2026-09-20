@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import settings
-from app.routers import appointments, auth, bookkeeping, facturen, subscriptions
+from app.routers import appointments, auth, facturen, subscriptions
 
 app = FastAPI(title="Zoofy Automation")
 
@@ -30,7 +30,6 @@ app.include_router(auth.router)
 app.include_router(subscriptions.router)
 app.include_router(appointments.router)
 app.include_router(facturen.router)
-app.include_router(bookkeeping.router)
 
 # Mounted before the frontend catch-all below, otherwise "/" would swallow /uploads requests first.
 UPLOADS_DIR = Path(__file__).resolve().parents[2] / "uploads"

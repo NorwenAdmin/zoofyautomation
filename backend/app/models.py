@@ -1,7 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Integer, Numeric, String, UniqueConstraint, func
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Date, DateTime, Numeric, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -79,26 +78,4 @@ class Factuur(Base):
     totaal: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     thread_link: Mapped[str | None] = mapped_column(String, nullable=True)
     pdf_url: Mapped[str | None] = mapped_column(String, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-
-class BookkeepingEntry(Base):
-    """A sales invoice as recorded in the accountant's own system (Exact Online), synced
-    separately from `facturen` (which comes from Zoofy's emails) so Compare can catch invoices
-    Zoofy issued that the accountant hasn't entered yet. `exact_id` is Exact's own GUID for the
-    invoice — the real dedup key, since `invoice_number`/`kenmerk` are just the two candidate
-    fields Compare tries to match against `facturen`, and it isn't confirmed yet which one (or
-    both) the accountant actually fills in. `raw` keeps Exact's full API response for anything
-    not otherwise mapped, since the real field shapes only get confirmed once this is wired up."""
-
-    __tablename__ = "bookkeeping_entries"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    exact_id: Mapped[str] = mapped_column(String, unique=True, nullable=False)
-    invoice_number: Mapped[str | None] = mapped_column(String, nullable=True)
-    kenmerk: Mapped[str | None] = mapped_column(String, nullable=True)
-    amount_incl: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
-    invoice_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    financial_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    raw: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
