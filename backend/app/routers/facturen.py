@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_current_user, require_n8n_api_key
 from app.db import get_db
 from app.models import Factuur
-from app.schemas import FactuurIn, FactuurOut
+from app.schemas import FactuurIn, FactuurOut, FactuurUpdateIn
 
 router = APIRouter(prefix="/api/facturen", tags=["facturen"])
 
@@ -39,6 +39,24 @@ async def create_factuur(payload: FactuurIn, db: AsyncSession = Depends(get_db))
         )
         row = existing.scalar_one()
     return row
+
+
+@router.patch("/{factuur_id}", response_model=FactuurOut, dependencies=[Depends(require_n8n_api_key)])
+async def update_factuur(factuur_id: int, payload: FactuurUpdateIn, db: AsyncSession = Depends(get_db)):
+    """n8n calls this once the PDF's text layer has been parsed for the job details that only
+    live in the PDF, not the email body (Klusnummer/Klusomschrijving/Klusadres) — a separate
+    call from create_factuur since PDF extraction happens on a parallel branch after the row
+    already exists, not before."""
+    invoice = await db.get(Factuur, factuur_id)
+    if invoice is None:
+        raise HTTPException(status_code=404, detail=f"No factuur with id {factuur_id}")
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(invoice, field, value)
+
+    await db.commit()
+    await db.refresh(invoice)
+    return invoice
 
 
 @router.post("/{factuur_id}/pdf", response_model=FactuurOut, dependencies=[Depends(require_n8n_api_key)])

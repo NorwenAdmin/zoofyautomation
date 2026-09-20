@@ -89,6 +89,12 @@ class FactuurIn(BaseModel):
     thread_link: str | None = None
 
 
+class FactuurUpdateIn(BaseModel):
+    klusnummer: str | None = None
+    klusomschrijving: str | None = None
+    klusadres: str | None = None
+
+
 class FactuurOut(BaseModel):
     id: int
     factuur: str
