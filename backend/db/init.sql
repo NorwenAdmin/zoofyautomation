@@ -46,6 +46,8 @@ CREATE TABLE IF NOT EXISTS facturen (
     totaal NUMERIC(10, 2),
     thread_link TEXT,
     pdf_url TEXT,
+    lat DOUBLE PRECISION,
+    lng DOUBLE PRECISION,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uq_facturen_factuur_totaal UNIQUE (factuur, totaal)
 );

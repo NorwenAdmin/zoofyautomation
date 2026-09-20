@@ -110,6 +110,8 @@ class FactuurOut(BaseModel):
     totaal: float | None
     thread_link: str | None
     pdf_url: str | None
+    lat: float | None
+    lng: float | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Numeric, String, UniqueConstraint, func
+from sqlalchemy import Date, DateTime, Float, Numeric, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -78,4 +78,8 @@ class Factuur(Base):
     totaal: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     thread_link: Mapped[str | None] = mapped_column(String, nullable=True)
     pdf_url: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Geocoded from klusadres (best-effort, via Nominatim — see app/geocoding.py) so the map
+    # view can plot job locations without re-geocoding on every page load.
+    lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    lng: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

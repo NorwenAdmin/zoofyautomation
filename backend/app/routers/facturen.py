@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user, require_n8n_api_key
 from app.db import get_db
+from app.geocoding import geocode_address
 from app.models import Factuur
 from app.schemas import FactuurIn, FactuurOut, FactuurUpdateIn
 
@@ -24,9 +25,14 @@ async def create_factuur(payload: FactuurIn, db: AsyncSession = Depends(get_db))
     factuur with a DIFFERENT amount is a genuine discrepancy the original sheet flagged
     instead of silently overwriting, so it's kept as its own row (frontend can spot these by
     grouping on `factuur` and checking for >1 distinct `totaal`)."""
+    values = payload.model_dump()
+    if values.get("klusadres"):
+        coords = await geocode_address(values["klusadres"])
+        if coords:
+            values["lat"], values["lng"] = coords
     stmt = (
         pg_insert(Factuur)
-        .values(**payload.model_dump())
+        .values(**values)
         .on_conflict_do_nothing(constraint="uq_facturen_factuur_totaal")
         .returning(Factuur)
     )
@@ -51,7 +57,12 @@ async def update_factuur(factuur_id: int, payload: FactuurUpdateIn, db: AsyncSes
     if invoice is None:
         raise HTTPException(status_code=404, detail=f"No factuur with id {factuur_id}")
 
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    if updates.get("klusadres"):
+        coords = await geocode_address(updates["klusadres"])
+        if coords:
+            updates["lat"], updates["lng"] = coords
+    for field, value in updates.items():
         setattr(invoice, field, value)
 
     await db.commit()

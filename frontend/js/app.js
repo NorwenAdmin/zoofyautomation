@@ -10,13 +10,18 @@ const appointmentsBody = document.getElementById("appointments-body");
 const appointmentsEmpty = document.getElementById("appointments-empty");
 const facturenBody = document.getElementById("facturen-body");
 const facturenEmpty = document.getElementById("facturen-empty");
+const mapEmpty = document.getElementById("map-empty");
 
 const tabButtons = document.querySelectorAll(".tab-btn");
 const tabPanels = {
   subscriptions: document.getElementById("tab-subscriptions"),
   appointments: document.getElementById("tab-appointments"),
   facturen: document.getElementById("tab-facturen"),
+  map: document.getElementById("tab-map"),
 };
+
+let leafletMap = null;
+let mapMarkers = null;
 
 const STALE_PENDING_DAYS = 60;
 
@@ -133,6 +138,45 @@ async function loadFacturen() {
   }
 }
 
+function ensureMap() {
+  if (leafletMap) return;
+  // Amsterdam-centered default view — every job so far is in/near NL, and there's nothing
+  // to fit bounds to before the first load.
+  leafletMap = L.map("map").setView([52.3676, 4.9041], 11);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap contributors",
+  }).addTo(leafletMap);
+  mapMarkers = L.layerGroup().addTo(leafletMap);
+}
+
+async function loadMap() {
+  ensureMap();
+  const rows = await api("/api/facturen");
+  const withCoords = rows.filter((r) => r.lat != null && r.lng != null);
+  mapEmpty.hidden = withCoords.length > 0;
+
+  mapMarkers.clearLayers();
+  for (const row of withCoords) {
+    const marker = L.marker([row.lat, row.lng]);
+    marker.bindPopup(`
+      <strong>${row.klusomschrijving || "Klus"}</strong><br>
+      ${row.klusadres || ""}<br>
+      ${formatDate(row.factuurdatum)}${row.thread_link ? ` · <a href="${row.thread_link}" target="_blank">Письмо</a>` : ""}
+    `);
+    mapMarkers.addLayer(marker);
+  }
+
+  // The map's container was hidden (display:none) until this tab was opened, so Leaflet's
+  // internal size calculation needs a nudge once it's actually visible.
+  setTimeout(() => {
+    leafletMap.invalidateSize();
+    if (withCoords.length > 0) {
+      leafletMap.fitBounds(withCoords.map((r) => [r.lat, r.lng]), { padding: [20, 20] });
+    }
+  }, 0);
+}
+
 function switchTab(name) {
   for (const btn of tabButtons) {
     btn.classList.toggle("active", btn.dataset.tab === name);
@@ -140,6 +184,7 @@ function switchTab(name) {
   for (const [key, panel] of Object.entries(tabPanels)) {
     panel.hidden = key !== name;
   }
+  if (name === "map") loadMap();
 }
 
 for (const btn of tabButtons) {
