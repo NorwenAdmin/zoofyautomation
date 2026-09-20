@@ -25,6 +25,14 @@ jobs:
           LIVE_OWNER_PASSWORD: ${{ secrets.LIVE_OWNER_PASSWORD }}
         run: npm run test:live
 
+      - name: Send results to TestMind
+        if: always()
+        working-directory: tests
+        env:
+          TESTMIND_INGEST_URL: ${{ secrets.TESTMIND_INGEST_URL }}
+          TESTMIND_API_KEY: ${{ secrets.TESTMIND_API_KEY }}
+        run: npm run send-results -- live
+
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4

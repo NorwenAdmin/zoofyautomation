@@ -22,6 +22,14 @@ jobs:
         working-directory: tests
         run: npm run test:mock
 
+      - name: Send results to TestMind
+        if: always()
+        working-directory: tests
+        env:
+          TESTMIND_INGEST_URL: ${{ secrets.TESTMIND_INGEST_URL }}
+          TESTMIND_API_KEY: ${{ secrets.TESTMIND_API_KEY }}
+        run: npm run send-results -- mock
+
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4

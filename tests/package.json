@@ -7,7 +7,8 @@
     "test:mock": "bash scripts/run-mock.sh",
     "test:live": "playwright test --project=live",
     "snapshot-openapi": "tsx scripts/snapshot-openapi.ts",
-    "check-drift": "tsx scripts/check-drift.ts"
+    "check-drift": "tsx scripts/check-drift.ts",
+    "send-results": "tsx scripts/send-results.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",

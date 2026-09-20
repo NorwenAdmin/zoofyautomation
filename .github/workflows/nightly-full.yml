@@ -17,6 +17,13 @@ jobs:
         run: npm ci
       - working-directory: tests
         run: npm run test:mock
+      - name: Send results to TestMind
+        if: always()
+        working-directory: tests
+        env:
+          TESTMIND_INGEST_URL: ${{ secrets.TESTMIND_INGEST_URL }}
+          TESTMIND_API_KEY: ${{ secrets.TESTMIND_API_KEY }}
+        run: npm run send-results -- mock
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -38,6 +45,13 @@ jobs:
           LIVE_OWNER_EMAIL: ${{ secrets.LIVE_OWNER_EMAIL }}
           LIVE_OWNER_PASSWORD: ${{ secrets.LIVE_OWNER_PASSWORD }}
         run: npm run test:live
+      - name: Send results to TestMind
+        if: always()
+        working-directory: tests
+        env:
+          TESTMIND_INGEST_URL: ${{ secrets.TESTMIND_INGEST_URL }}
+          TESTMIND_API_KEY: ${{ secrets.TESTMIND_API_KEY }}
+        run: npm run send-results -- live
       - if: always()
         uses: actions/upload-artifact@v4
         with:
