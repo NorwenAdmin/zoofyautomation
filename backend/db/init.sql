@@ -49,3 +49,15 @@ CREATE TABLE IF NOT EXISTS facturen (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT uq_facturen_factuur_totaal UNIQUE (factuur, totaal)
 );
+
+CREATE TABLE IF NOT EXISTS bookkeeping_entries (
+    id SERIAL PRIMARY KEY,
+    exact_id TEXT NOT NULL UNIQUE,
+    invoice_number TEXT,
+    kenmerk TEXT,
+    amount_incl NUMERIC(10, 2),
+    invoice_date DATE,
+    financial_year INTEGER,
+    raw JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
