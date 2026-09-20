@@ -499,6 +499,69 @@
         }
       }
     },
+    "/api/facturen/{factuur_id}": {
+      "patch": {
+        "tags": [
+          "facturen"
+        ],
+        "summary": "Update Factuur",
+        "description": "n8n calls this once the PDF's text layer has been parsed for the job details that only\nlive in the PDF, not the email body (Klusnummer/Klusomschrijving/Klusadres) — a separate\ncall from create_factuur since PDF extraction happens on a parallel branch after the row\nalready exists, not before.",
+        "operationId": "update_factuur_api_facturen__factuur_id__patch",
+        "parameters": [
+          {
+            "name": "factuur_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Factuur Id"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FactuurUpdateIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FactuurOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/facturen/{factuur_id}/pdf": {
       "post": {
         "tags": [
@@ -1108,6 +1171,45 @@
           "created_at"
         ],
         "title": "FactuurOut"
+      },
+      "FactuurUpdateIn": {
+        "properties": {
+          "klusnummer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Klusnummer"
+          },
+          "klusomschrijving": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Klusomschrijving"
+          },
+          "klusadres": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Klusadres"
+          }
+        },
+        "type": "object",
+        "title": "FactuurUpdateIn"
       },
       "HTTPValidationError": {
         "properties": {
