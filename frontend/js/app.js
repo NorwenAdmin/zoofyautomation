@@ -59,14 +59,15 @@ function formatDateTime(value) {
   return d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-// "Выполнено" isn't computed here yet — that needs a join against `facturen`, which doesn't
-// exist as a table/endpoint yet (planned in workflow 6). Until it does, the "stale → cancelled
-// via support" fallback below is disabled: without a "Выполнено" check first, it would wrongly
-// flag genuinely-completed old visits as cancelled, since there's currently no way to tell them
-// apart. Re-enable once facturen exists and this function checks it first.
-function appointmentStatus(row) {
+// "Выполнено" is checked FIRST, ahead of cancellation — a real factuur means the job actually
+// happened and got invoiced, which takes priority even over a stray cancellation email for the
+// same klusnummer. Once that's ruled out, the stale-pending fallback below is safe to use: it
+// used to risk mislabeling genuinely-completed old visits as cancelled, but now that a real
+// completion is caught first, anything left really is just an old visit nobody followed up on.
+function appointmentStatus(row, completedKlusnummers) {
+  if (completedKlusnummers.has(row.klusnummer)) return "✅ Выполнено";
   if (row.cancelled_at) return "❌ Отменено";
-  if (false && row.appointment_date) {
+  if (row.appointment_date) {
     const staleCutoff = new Date();
     staleCutoff.setDate(staleCutoff.getDate() - STALE_PENDING_DAYS);
     if (new Date(row.appointment_date) < staleCutoff) return "❌ Отменено через саппорт";
@@ -94,7 +95,8 @@ async function loadSubscriptions() {
 }
 
 async function loadAppointments() {
-  const rows = await api("/api/appointments");
+  const [rows, facturen] = await Promise.all([api("/api/appointments"), api("/api/facturen")]);
+  const completedKlusnummers = new Set(facturen.map((f) => f.klusnummer).filter(Boolean));
   appointmentsBody.innerHTML = "";
   appointmentsEmpty.hidden = rows.length > 0;
   for (const row of rows) {
@@ -106,7 +108,7 @@ async function loadAppointments() {
       <td>${formatDate(row.appointment_date)}</td>
       <td>${formatDateTime(row.start_time)}</td>
       <td>${formatDateTime(row.end_time)}</td>
-      <td>${appointmentStatus(row)}</td>
+      <td>${appointmentStatus(row, completedKlusnummers)}</td>
       <td>${link ? `<a href="${link}" target="_blank">Открыть</a>` : ""}</td>
     `;
     appointmentsBody.appendChild(tr);
