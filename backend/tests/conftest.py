@@ -28,7 +28,7 @@ async def db_session():
             yield session
         finally:
             await session.rollback()
-            for table in ["subscription_invoices", "appointments", "facturen"]:
+            for table in ["subscription_invoices", "appointments", "facturen", "bookkeeping_entries"]:
                 await session.execute(text(f"DELETE FROM {table}"))
             await session.commit()
     await engine.dispose()

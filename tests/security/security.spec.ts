@@ -12,6 +12,7 @@ test.describe("Security", () => {
         { method: "POST", path: "/api/subscriptions", body: { factuur: "X", kenmerk: "k" } },
         { method: "POST", path: "/api/appointments", body: { klusnummer: "X" } },
         { method: "POST", path: "/api/facturen", body: { factuur: "X", totaal: 1 } },
+        { method: "POST", path: "/api/bookkeeping-entries", body: { exact_id: "X" } },
       ];
       for (const { method, path, body } of endpoints) {
         const res = await fetch(`${baseUrl}${path}`, {
@@ -82,6 +83,66 @@ test.describe("Security", () => {
         expect(res.status).toBe(200);
         const body = await res.json();
         expect(body.klus).toBe(payload.klus);
+      }
+    );
+
+    test(
+      "SQL-injection-shaped strings in bookkeeping entry fields are stored safely, not executed",
+      { tag: "@security" },
+      async ({ apiKeyHeaders, ownerApi }, testInfo) => {
+        const baseUrl = baseUrlFor(testInfo.project.name);
+        // invoice_number and kenmerk are free text straight out of Exact Online, and Compare
+        // reads both back — so they are the fields an injection would ride in on.
+        const payload = {
+          exact_id: `INJ-EXACT-${Date.now()}`,
+          invoice_number: "1'; DROP TABLE bookkeeping_entries; --",
+          kenmerk: "' OR '1'='1",
+        };
+        const res = await fetch(`${baseUrl}/api/bookkeeping-entries`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...apiKeyHeaders },
+          body: JSON.stringify(payload),
+        });
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        // Stored verbatim as plain strings — parameterized queries never interpret them as SQL.
+        expect(body.invoice_number).toBe(payload.invoice_number);
+        expect(body.kenmerk).toBe(payload.kenmerk);
+
+        // The real proof an injection didn't land: the table still exists and is queryable,
+        // including through Compare, which joins these fields against facturen.
+        const listRes = await ownerApi.get("/api/bookkeeping-entries");
+        expect(listRes.status()).toBe(200);
+        const compareRes = await ownerApi.get("/api/bookkeeping/compare");
+        expect(compareRes.status()).toBe(200);
+      }
+    );
+
+    test(
+      "script-tag-shaped strings in bookkeeping entry fields are stored verbatim, not executed",
+      { tag: "@security" },
+      async ({ apiKeyHeaders, ownerApi }, testInfo) => {
+        const baseUrl = baseUrlFor(testInfo.project.name);
+        const payload = {
+          exact_id: `XSS-EXACT-${Date.now()}`,
+          invoice_number: "<script>alert(1)</script>",
+          kenmerk: "<img src=x onerror=alert(1)>",
+        };
+        const res = await fetch(`${baseUrl}/api/bookkeeping-entries`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...apiKeyHeaders },
+          body: JSON.stringify(payload),
+        });
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.invoice_number).toBe(payload.invoice_number);
+        expect(body.kenmerk).toBe(payload.kenmerk);
+
+        // Unescaped on the way back out too — the dashboard is what must escape it at render
+        // time, and it can only do that if the API hands over exactly what was stored.
+        const list = await (await ownerApi.get("/api/bookkeeping-entries")).json();
+        const stored = list.find((e: any) => e.exact_id === payload.exact_id);
+        expect(stored.invoice_number).toBe(payload.invoice_number);
       }
     );
   });

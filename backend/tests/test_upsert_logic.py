@@ -4,11 +4,12 @@
 # payload, and none of these must create a second row.
 from sqlalchemy import select
 
-from app.models import Appointment, Factuur, SubscriptionInvoice
+from app.models import Appointment, BookkeepingEntry, Factuur, SubscriptionInvoice
 from app.routers.appointments import cancel_appointment, create_appointment
+from app.routers.bookkeeping import create_bookkeeping_entry
 from app.routers.facturen import create_factuur
 from app.routers.subscriptions import create_subscription_invoice
-from app.schemas import AppointmentCancelIn, AppointmentIn, FactuurIn, SubscriptionInvoiceIn
+from app.schemas import AppointmentCancelIn, AppointmentIn, BookkeepingEntryIn, FactuurIn, SubscriptionInvoiceIn
 
 
 async def test_create_factuur_retry_does_not_duplicate(db_session):
@@ -77,3 +78,70 @@ async def test_cancel_appointment_creates_stub_then_confirmation_fills_it_in(db_
     assert len(rows) == 1  # still one row, not a second one
     assert rows[0].appointment_date is not None
     assert rows[0].cancelled_at is not None  # the earlier cancellation is preserved
+
+
+async def test_create_bookkeeping_entry_retry_does_not_duplicate(db_session):
+    payload = BookkeepingEntryIn(
+        exact_id="EX-RETRY",
+        invoice_number="INV-RETRY",
+        kenmerk="k",
+        amount_incl=121.0,
+        raw={"Description": "Zoofy klus"},
+    )
+
+    first = await create_bookkeeping_entry(payload, db_session)
+    second = await create_bookkeeping_entry(payload, db_session)
+
+    assert first.id == second.id
+    rows = (
+        (await db_session.execute(select(BookkeepingEntry).where(BookkeepingEntry.exact_id == "EX-RETRY")))
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 1
+    assert rows[0].raw == {"Description": "Zoofy klus"}
+
+
+async def test_create_bookkeeping_entry_conflict_keeps_the_stored_row(db_session):
+    """The router upserts ON CONFLICT DO NOTHING, so a re-sync of the same Exact invoice — even
+    one carrying changed values — must return the row already stored rather than overwrite it
+    or raise. First write wins, unlike facturen where a changed amount is a new row."""
+    await create_bookkeeping_entry(
+        BookkeepingEntryIn(exact_id="EX-NOOVERWRITE", invoice_number="INV-FIRST", amount_incl=100.0), db_session
+    )
+    second = await create_bookkeeping_entry(
+        BookkeepingEntryIn(exact_id="EX-NOOVERWRITE", invoice_number="INV-SECOND", amount_incl=200.0), db_session
+    )
+
+    assert second.invoice_number == "INV-FIRST"
+
+    # Same reason as the appointments stub test above: the insert ran as a Core statement, so a
+    # plain select() could hand back the session's cached instance instead of re-reading Postgres.
+    db_session.expire_all()
+    rows = (
+        (await db_session.execute(select(BookkeepingEntry).where(BookkeepingEntry.exact_id == "EX-NOOVERWRITE")))
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 1
+    assert rows[0].invoice_number == "INV-FIRST"
+    assert float(rows[0].amount_incl) == 100.0
+
+
+async def test_create_bookkeeping_entry_dedups_on_exact_id_not_invoice_number(db_session):
+    """Two Exact invoices can legitimately share an invoice_number (or a kenmerk) — only the
+    GUID identifies the record, so these must stay two rows."""
+    await create_bookkeeping_entry(
+        BookkeepingEntryIn(exact_id="EX-A", invoice_number="INV-SHARED", kenmerk="K-SHARED"), db_session
+    )
+    await create_bookkeeping_entry(
+        BookkeepingEntryIn(exact_id="EX-B", invoice_number="INV-SHARED", kenmerk="K-SHARED"), db_session
+    )
+
+    rows = (
+        (await db_session.execute(select(BookkeepingEntry).where(BookkeepingEntry.invoice_number == "INV-SHARED")))
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 2
+    assert {r.exact_id for r in rows} == {"EX-A", "EX-B"}
