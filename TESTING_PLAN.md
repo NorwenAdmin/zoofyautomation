@@ -40,9 +40,15 @@
 - [x] `tests/fixtures/auth.ts` — `ownerApi` (реальный `POST /api/auth/login`, cookie-контекст; mock использует отдельный throwaway owner-аккаунт `test-owner@example.com`, live — реальный `kosty31@gmail.com`), `apiKeyHeaders` (реальный `X-API-Key`, кидает ошибку если случайно использован в проекте `live`)
 - [x] `tests/scripts/seed-owner.ts` — регистрирует throwaway owner в свежей mock-базе перед прогоном (идемпотентно)
 
-## US-5. Data integrity на уровне БД
+## US-5. Data integrity на уровне БД — ✅ ГОТОВО, проверено локально и в CI (2026-09-20)
 Как QA-инженер, хочу тесты напрямую против Postgres, чтобы проверять constraints/upsert-логику, а не только ответы API.
 - AC: pytest-набор. Проверка `uq_facturen_factuur_totaal`. Проверка, что повторный POST (имитация retry от n8n) не создаёт дублей.
+- [x] `backend/tests/` — вызывает реальные функции роутеров напрямую (`create_factuur`, `create_appointment`, `cancel_appointment` и т.д.), минуя HTTP — это дополнительный слой к Playwright: ловит то, что HTTP-тесты структурно не видят (например, миграцию, случайно убравшую constraint)
+- [x] `test_constraints.py` — `uq_facturen_factuur_totaal` блокирует точный повтор, но разрешает тот же factuur с другим totaal (расхождение — не ошибка); уникальность `subscription_invoices.factuur` и `appointments.klusnummer`
+- [x] `test_upsert_logic.py` — повторный вызов `create_factuur`/`create_subscription_invoice` не создаёт дублей; `create_appointment` затирает только пустые поля (первая запись побеждает); `cancel_appointment` может создать stub-строку до прихода подтверждения, и последующий `create_appointment` дозаполняет ту же строку
+- [x] Новый job `db-tests` в `test-mock.yml` (нативный Postgres service container в GitHub Actions, не docker-compose — не нужен весь app-контейнер, тесты бьют в БД напрямую)
+- [x] **Проверено дважды**: локально (`backend/tests/run.sh`, 8/8) и в реальном PR ([#5](https://github.com/NorwenAdmin/zoofyautomation/pull/5)) — оба чека (`test-mock`, `db-tests`) зелёные, смёржено
+- [x] По пути нашёл и исправил реальную ловушку SQLAlchemy AsyncSession identity map: переиспользование одной сессии для двух "запросов" подряд в тесте молча возвращало закэшированный устаревший объект вместо свежих данных из БД — не баг приложения (в проде у каждого HTTP-запроса своя сессия), но важно для написания будущих тестов такого рода
 
 ## US-6. Non-functional и security проверки
 Как QA-инженер, хочу базовые проверки latency и security, чтобы ловить деградации и очевидные уязвимости автоматически.
