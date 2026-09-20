@@ -113,3 +113,32 @@ class FactuurOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class BookkeepingEntryIn(BaseModel):
+    exact_id: str
+    invoice_number: str | None = None
+    kenmerk: str | None = None
+    amount_incl: float | None = None
+    invoice_date: date | None = None
+    financial_year: int | None = None
+    raw: dict | None = None
+
+
+class BookkeepingEntryOut(BaseModel):
+    id: int
+    exact_id: str
+    invoice_number: str | None
+    kenmerk: str | None
+    amount_incl: float | None
+    invoice_date: date | None
+    financial_year: int | None
+    raw: dict | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class BookkeepingCompareOut(BaseModel):
+    missing_in_bookkeeping: list[FactuurOut]
+    missing_in_facturen: list[BookkeepingEntryOut]
