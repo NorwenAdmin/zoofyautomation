@@ -13,8 +13,8 @@ from app.schemas import FactuurIn, FactuurOut, FactuurUpdateIn
 router = APIRouter(prefix="/api/facturen", tags=["facturen"])
 
 # Sibling of backend/ and frontend/, same reasoning as subscriptions.py — untouched by
-# deploy.sh's rsync --delete.
-UPLOADS_DIR = Path(__file__).resolve().parents[3] / "uploads" / "facturen"
+# deploy.sh's rsync --delete. Nested under gmail/, see subscriptions.py's UPLOADS_DIR comment.
+UPLOADS_DIR = Path(__file__).resolve().parents[3] / "uploads" / "gmail" / "facturen"
 
 
 @router.post("", response_model=FactuurOut, dependencies=[Depends(require_n8n_api_key)])
@@ -68,7 +68,7 @@ async def upload_factuur_pdf(factuur_id: int, file: UploadFile = File(...), db: 
     UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     (UPLOADS_DIR / f"{factuur_id}.pdf").write_bytes(await file.read())
 
-    invoice.pdf_url = f"/uploads/facturen/{factuur_id}.pdf"
+    invoice.pdf_url = f"/uploads/gmail/facturen/{factuur_id}.pdf"
     await db.commit()
     await db.refresh(invoice)
     return invoice

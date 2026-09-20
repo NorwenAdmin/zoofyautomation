@@ -14,7 +14,9 @@ router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
 
 # Sits next to backend/ and frontend/, not inside either, so `deploy.sh`'s rsync --delete
 # (which only manages the contents of backend/ and frontend/) never touches uploaded files.
-UPLOADS_DIR = Path(__file__).resolve().parents[3] / "uploads" / "subscriptions"
+# Nested under gmail/ since these PDFs come from parsed Gmail attachments — a future source
+# (e.g. the accountant's bookkeeping portal) would get its own top-level uploads/ prefix.
+UPLOADS_DIR = Path(__file__).resolve().parents[3] / "uploads" / "gmail" / "subscriptions"
 
 
 @router.post("", response_model=SubscriptionInvoiceOut, dependencies=[Depends(require_n8n_api_key)])
@@ -55,7 +57,7 @@ async def upload_subscription_pdf(factuur: str, file: UploadFile = File(...), db
     # factuur is already validated as an existing unique row, safe to use directly as a filename.
     (UPLOADS_DIR / f"{factuur}.pdf").write_bytes(await file.read())
 
-    invoice.pdf_url = f"/uploads/subscriptions/{factuur}.pdf"
+    invoice.pdf_url = f"/uploads/gmail/subscriptions/{factuur}.pdf"
     await db.commit()
     await db.refresh(invoice)
     return invoice
