@@ -1,12 +1,20 @@
 name: Update contract snapshot
 
-# Manual, deliberate step — run this after merging a generate-tests.yml PR AND confirming the
-# corresponding change is actually deployed to https://zoofyautomation.norwen.nl. Never runs
-# automatically, since a deploy here happens out-of-band (deploy/deploy.sh from a developer's
-# machine), not as a result of a git push — an automatic snapshot update on push could capture
-# the wrong baseline before the deploy actually lands.
+# Two ways to run this:
+# 1. workflow_dispatch — manual, for after a deploy you want to confirm before bumping the
+#    baseline yourself.
+# 2. Automatically, when a PR from generate-tests.yml (branch testmind/update-tests-*) merges
+#    into main. This is safe specifically because check-drift.ts compares against the LIVE
+#    server, not git — if that PR's drift was detected at all, the underlying change was
+#    already live at detection time. A human merging the generated tests is the signal that
+#    coverage for that drift is now acceptable, so the baseline can move.
+# Deliberately NOT triggered on every push/deploy: bumping the snapshot before generate-tests.yml
+# ever sees the drift would erase it before an AI-drafted test gets a chance to exist.
 on:
   workflow_dispatch: {}
+  pull_request:
+    types: [closed]
+    branches: [main]
 
 permissions:
   contents: write
@@ -14,9 +22,17 @@ permissions:
 
 jobs:
   update-snapshot:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       startsWith(github.event.pull_request.head.ref, 'testmind/update-tests-'))
     runs-on: ubuntu-latest
     steps:
+      # Explicit ref: on a closed pull_request event, checkout's default resolves to a PR-merge
+      # ref, not necessarily main's actual current tip after the merge landed.
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - uses: actions/setup-node@v4
         with:
