@@ -1,0 +1,21 @@
+{
+  "name": "zoofyautomation-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:mock": "bash scripts/run-mock.sh",
+    "test:live": "playwright test --project=live",
+    "snapshot-openapi": "tsx scripts/snapshot-openapi.ts",
+    "check-drift": "tsx scripts/check-drift.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^22.7.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "dotenv": "^16.4.5",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
+}

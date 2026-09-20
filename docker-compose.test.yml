@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: zoofyautomation
+      POSTGRES_PASSWORD: zoofyautomation
+      POSTGRES_DB: zoofyautomation
+    ports:
+      - "127.0.0.1:5437:5432"
+    volumes:
+      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zoofyautomation"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  app:
+    build:
+      context: ./backend
+    environment:
+      DATABASE_URL: postgresql+asyncpg://zoofyautomation:zoofyautomation@db:5432/zoofyautomation
+      SESSION_SECRET: test-session-secret
+      N8N_API_KEY: test-api-key
+    ports:
+      - "127.0.0.1:8003:8000"
+    depends_on:
+      db:
+        condition: service_healthy

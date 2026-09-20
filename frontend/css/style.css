@@ -1,0 +1,152 @@
+:root {
+  color-scheme: light dark;
+  --bg: #0f1115;
+  --surface: #171a21;
+  --border: #2a2e37;
+  --text: #e8eaed;
+  --text-dim: #9aa0a8;
+  --accent: #4f8cff;
+  --error: #ff6b6b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.view[hidden] {
+  display: none;
+}
+
+.login-form {
+  max-width: 320px;
+  margin: 15vh auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+}
+
+.login-form h1 {
+  font-size: 1.3rem;
+  margin: 0 0 8px;
+  text-align: center;
+}
+
+.login-form input {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.login-form button {
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: white;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.error {
+  color: var(--error);
+  min-height: 1.2em;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+header button {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 12px 24px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-btn {
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-btn.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+main {
+  padding: 24px;
+  overflow-x: auto;
+}
+
+.tab-panel[hidden] {
+  display: none;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+tr.discrepancy {
+  background: #4a3f14;
+}
+
+th, td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+th {
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+a {
+  color: var(--accent);
+}
+
+.empty-state {
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 40px;
+}

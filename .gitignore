@@ -1,0 +1,12 @@
+backend/.venv/
+backend/__pycache__/
+backend/app/__pycache__/
+backend/app/routers/__pycache__/
+**/__pycache__/
+backend/.env
+tests/.env
+uploads/
+node_modules/
+test-results/
+playwright-report/
+.DS_Store
