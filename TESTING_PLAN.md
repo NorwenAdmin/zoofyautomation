@@ -6,7 +6,9 @@
 Фундамент первым — US-1 + US-2 + US-3 + US-4, только для `subscription_invoices`. Готово и проверено (2026-09-20), см. ниже. Остальные ресурсы (`appointments`, `facturen`) и CI (US-5–US-9) — по мере продолжения.
 
 ## Git — ✅ ГОТОВО
-`git init` + `.gitignore` (`.venv`, `node_modules`, `.env`, `uploads/`, `test-results/`, `playwright-report/`) + приватный репозиторий [github.com/NorwenAdmin/zoofyautomation](https://github.com/NorwenAdmin/zoofyautomation), запушено в `main`. По пути нашли и убрали захардкоженный продакшен-пароль из `tests/env.ts` (он там был при первой версии) — вынесли в `tests/.env` (gitignored) + `tests/.env.example` (шаблон, закоммичен). Готово к US-7 (CI) когда дойдём.
+`git init` + `.gitignore` (`.venv`, `node_modules`, `.env`, `uploads/`, `test-results/`, `playwright-report/`) + репозиторий [github.com/NorwenAdmin/zoofyautomation](https://github.com/NorwenAdmin/zoofyautomation), запушено в `main`. По пути нашли и убрали захардкоженный продакшен-пароль из `tests/env.ts` (он там был при первой версии, в коммит не попал) — вынесли в `tests/.env` (gitignored) + `tests/.env.example` (шаблон, закоммичен).
+
+**Репозиторий публичный** (сделан публичным 2026-09-20, чтобы включить branch protection — required status checks недоступны для приватных репо без GitHub Pro). Перед переключением вся git-история проверена на секреты (`git log --all -p` по всем известным значениям) — чисто, ничего не утекло.
 
 ## US-1. Контракт из кода, не руками — ✅ ГОТОВО
 Как QA-инженер, хочу, чтобы контракт API брался из самого FastAPI (`/openapi.json`), а не писался вручную, чтобы тесты никогда не расходились с реальной реализацией.
@@ -46,14 +48,21 @@
 Как QA-инженер, хочу базовые проверки latency и security, чтобы ловить деградации и очевидные уязвимости автоматически.
 - AC: `@nonfunctional` — latency threshold (например p95 < X ms). `@security` — невалидный `X-API-Key` отклоняется, injection-попытки в query/body не ломают эндпоинт.
 
-## US-7. CI на нужных событиях
+## US-7. CI на нужных событиях — ✅ ГОТОВО
 Как QA-инженер, хочу, чтобы тесты гонялись автоматически на правильных триггерах, чтобы регрессии ловились до мержа, а дрифт — после деплоя.
 - AC: `test-mock.yml` на `pull_request` — mock, блокирует merge при failure. `test-live.yml` на `push` в `main` — live, read-only. `nightly-full.yml` на cron + `workflow_dispatch` — оба таргета, все теги.
+- [x] `.github/workflows/test-mock.yml` — реально прогнан на настоящем PR (#1), 54с, зелёный
+- [x] `.github/workflows/test-live.yml` — реально прогнан на push в main, зелёный (секреты `LIVE_OWNER_EMAIL`/`LIVE_OWNER_PASSWORD` в GitHub Secrets)
+- [x] `.github/workflows/nightly-full.yml` — реально прогнан вручную (workflow_dispatch), оба job'а (mock + live) зелёные
+- [x] Branch protection на `main`: required status check `test-mock`, `strict: true` — реально merge теперь блокируется при красном тесте (потребовало сделать репозиторий публичным — required status checks недоступны для приватных репо без GitHub Pro)
 
-## US-8. AI-генерация тестов на новые эндпоинты
+## US-8. AI-генерация тестов на новые эндпоинты — ✅ ГОТОВО (инфраструктура; генерация ещё не проверена на реальном дрифте)
 Как QA-инженер, хочу, чтобы новые эндпоинты автоматически получали черновик тестов, чтобы покрытие не отставало от разработки.
 - AC: `generate-tests.yml` детектит дрифт живого `/openapi.json` от снепшота. При дрифте запускает Claude Code (headless, `claude -p`) с диффом, просит сгенерировать тесты по паттерну существующих `tests/contracts/*.spec.ts`. Результат — новая ветка + PR, никогда прямой push в main. Снепшот обновляется только после мержа.
-- **Нужен:** `ANTHROPIC_API_KEY` (или работаем на fallback, если не дадут).
+- [x] `ANTHROPIC_API_KEY` — получен, сохранён как GitHub secret
+- [x] `.github/workflows/generate-tests.yml` — реально прогнан вручную, drift-check корректно нашёл "нет дрифта" и пропустил шаги генерации (сама генерация через `claude -p` не проверена — нужен реальный дрифт контракта, чтобы увидеть путь с PR)
+- [x] `.github/workflows/update-snapshot.yml` (не было в исходном AC, добавлено по необходимости) — ручной workflow, обновляет снепшот после мержа + подтверждённого деплоя; реально прогнан, no-op когда снепшот уже актуален
+- [x] Найден и исправлен реальный баг: многострочный `--body` в `generate-tests.yml` ломал YAML-отступы block scalar — заменили на однострочный `$'...\n...'`
 
 ## US-9. Отправка результатов во внешний сервис
 Как QA-инженер, хочу, чтобы результаты тестов уходили во внешний ingest-эндпоинт, чтобы AI-анализ и дашборд жили отдельно от этого репозитория.
