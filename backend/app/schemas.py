@@ -115,3 +115,36 @@ class FactuurOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class BookkeepingEntryIn(BaseModel):
+    kees_id: int
+    invoice_number: str | None = None
+    file_name: str | None = None
+    description: str | None = None
+    customer_name: str | None = None
+    amount_incl: float | None = None
+    state: str | None = None
+    invoice_date: date | None = None
+    raw: dict | None = None
+
+
+class BookkeepingEntryOut(BaseModel):
+    id: int
+    kees_id: int
+    invoice_number: str | None
+    file_name: str | None
+    description: str | None
+    customer_name: str | None
+    amount_incl: float | None
+    state: str | None
+    invoice_date: date | None
+    raw: dict | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class BookkeepingCompareOut(BaseModel):
+    missing_in_bookkeeping: list[FactuurOut]
+    missing_in_facturen: list[BookkeepingEntryOut]

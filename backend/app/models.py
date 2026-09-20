@@ -1,6 +1,7 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Float, Numeric, String, UniqueConstraint, func
+from sqlalchemy import Date, DateTime, Float, Integer, Numeric, String, UniqueConstraint, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -82,4 +83,30 @@ class Factuur(Base):
     # view can plot job locations without re-geocoding on every page load.
     lat: Mapped[float | None] = mapped_column(Float, nullable=True)
     lng: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BookkeepingEntry(Base):
+    """A sales invoice as recorded by the accountant (Kees de Boekhouder), synced separately
+    from `facturen` (which comes from Zoofy's emails) so Compare can catch invoices Zoofy
+    issued that the accountant hasn't entered yet. `kees_id` is Kees's own numeric invoice id —
+    the real dedup key. `invoice_number` usually matches `facturen.factuur`, but not always: on
+    some real invoices Kees's `invoiceNr` field actually holds the Kenmerk value instead, so
+    Compare has to try `invoice_number`, `file_name` (Kees's own PDF filename, minus `.pdf`,
+    which stays factuur-shaped even when invoice_number doesn't), and `kenmerk` — no single
+    field is a reliable 1:1 match. `raw` keeps Kees's full API response for anything not
+    otherwise mapped."""
+
+    __tablename__ = "bookkeeping_entries"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kees_id: Mapped[int] = mapped_column(Integer, unique=True, nullable=False)
+    invoice_number: Mapped[str | None] = mapped_column(String, nullable=True)
+    file_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    description: Mapped[str | None] = mapped_column(String, nullable=True)
+    customer_name: Mapped[str | None] = mapped_column(String, nullable=True)
+    amount_incl: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    state: Mapped[str | None] = mapped_column(String, nullable=True)
+    invoice_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    raw: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
