@@ -15,10 +15,14 @@ export function validatorFor(openapiDoc: any, schemaName: string): ValidateFunct
     if (ajv.getSchema(schemaId)) {
       ajv.removeSchema(schemaId);
     }
-    ajv.addSchema({ $id: schemaId, ...openapiDoc.components }, schemaId);
+    // Kept nested under "components" (not spread) so internal $refs emitted by FastAPI, which
+    // are document-relative like "#/components/schemas/FactuurOut", resolve correctly. A schema
+    // that only has flat/primitive fields never needed this, but one that embeds another
+    // response model (e.g. BookkeepingCompareOut nesting FactuurOut) does.
+    ajv.addSchema({ $id: schemaId, components: openapiDoc.components }, schemaId);
     compiledForDoc = openapiDoc;
   }
-  const validate = ajv.getSchema(`${schemaId}#/schemas/${schemaName}`);
+  const validate = ajv.getSchema(`${schemaId}#/components/schemas/${schemaName}`);
   if (!validate) {
     throw new Error(`No schema named "${schemaName}" found in components.schemas`);
   }
