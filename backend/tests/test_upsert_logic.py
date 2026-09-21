@@ -4,11 +4,12 @@
 # payload, and none of these must create a second row.
 from sqlalchemy import select
 
-from app.models import Appointment, Factuur, SubscriptionInvoice
+from app.models import Appointment, BookkeepingEntry, Factuur, SubscriptionInvoice
 from app.routers.appointments import cancel_appointment, create_appointment
+from app.routers.bookkeeping import create_bookkeeping_entry
 from app.routers.facturen import create_factuur
 from app.routers.subscriptions import create_subscription_invoice
-from app.schemas import AppointmentCancelIn, AppointmentIn, FactuurIn, SubscriptionInvoiceIn
+from app.schemas import AppointmentCancelIn, AppointmentIn, BookkeepingEntryIn, FactuurIn, SubscriptionInvoiceIn
 
 
 async def test_create_factuur_retry_does_not_duplicate(db_session):
@@ -77,3 +78,57 @@ async def test_cancel_appointment_creates_stub_then_confirmation_fills_it_in(db_
     assert len(rows) == 1  # still one row, not a second one
     assert rows[0].appointment_date is not None
     assert rows[0].cancelled_at is not None  # the earlier cancellation is preserved
+
+
+async def test_create_bookkeeping_entry_retry_does_not_duplicate(db_session):
+    """n8n pulls invoices from Kees de Boekhouder one HTTP call at a time; a timed-out call it
+    re-sends must not land a second row for the same Kees invoice."""
+    payload = BookkeepingEntryIn(kees_id=5001, invoice_number="2026-1", amount_incl=121.0)
+
+    first = await create_bookkeeping_entry(payload, db_session)
+    second = await create_bookkeeping_entry(payload, db_session)
+
+    assert first.id == second.id
+    rows = (
+        (await db_session.execute(select(BookkeepingEntry).where(BookkeepingEntry.kees_id == 5001))).scalars().all()
+    )
+    assert len(rows) == 1
+
+
+async def test_create_bookkeeping_entry_conflict_keeps_stored_values(db_session):
+    """The router upserts ON CONFLICT DO NOTHING (not DO UPDATE) and then re-reads the row, so a
+    re-sync carrying changed values returns the existing row untouched — first write wins. This
+    is the behaviour Compare depends on staying stable, and it differs from a DO UPDATE upsert,
+    so it is worth pinning down rather than inferring from the endpoint responding 200."""
+    await create_bookkeeping_entry(BookkeepingEntryIn(kees_id=5002, invoice_number="ORIGINAL", state="open"), db_session)
+
+    returned = await create_bookkeeping_entry(
+        BookkeepingEntryIn(kees_id=5002, invoice_number="CHANGED", state="paid"), db_session
+    )
+
+    assert returned.invoice_number == "ORIGINAL"
+    assert returned.state == "open"
+
+    # The DO NOTHING insert ran as a Core statement, outside the ORM's instance tracking — force
+    # a fresh read so this asserts against Postgres, not the session's identity map (see
+    # test_cancel_appointment_creates_stub_then_confirmation_fills_it_in).
+    db_session.expire_all()
+    rows = (
+        (await db_session.execute(select(BookkeepingEntry).where(BookkeepingEntry.kees_id == 5002))).scalars().all()
+    )
+    assert len(rows) == 1
+    assert rows[0].invoice_number == "ORIGINAL"
+
+
+async def test_create_bookkeeping_entry_distinct_kees_ids_both_insert(db_session):
+    """Dedup is on kees_id alone — two different Kees invoices that happen to share an
+    invoice_number (Kees sometimes puts the Kenmerk there) must both be stored."""
+    await create_bookkeeping_entry(BookkeepingEntryIn(kees_id=5003, invoice_number="SHARED"), db_session)
+    await create_bookkeeping_entry(BookkeepingEntryIn(kees_id=5004, invoice_number="SHARED"), db_session)
+
+    rows = (
+        (await db_session.execute(select(BookkeepingEntry).where(BookkeepingEntry.invoice_number == "SHARED")))
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 2

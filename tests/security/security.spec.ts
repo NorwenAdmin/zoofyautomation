@@ -12,6 +12,7 @@ test.describe("Security", () => {
         { method: "POST", path: "/api/subscriptions", body: { factuur: "X", kenmerk: "k" } },
         { method: "POST", path: "/api/appointments", body: { klusnummer: "X" } },
         { method: "POST", path: "/api/facturen", body: { factuur: "X", totaal: 1 } },
+        { method: "POST", path: "/api/bookkeeping-entries", body: { kees_id: 1 } },
       ];
       for (const { method, path, body } of endpoints) {
         const res = await fetch(`${baseUrl}${path}`, {
@@ -82,6 +83,60 @@ test.describe("Security", () => {
         expect(res.status).toBe(200);
         const body = await res.json();
         expect(body.klus).toBe(payload.klus);
+      }
+    );
+
+    // Bookkeeping entries carry free text straight from Kees de Boekhouder's API
+    // (description, customer_name, invoice_number) — text Zoofy never typed and can't vet.
+    test(
+      "SQL-injection-shaped strings in a bookkeeping entry are stored safely, not executed",
+      { tag: "@security" },
+      async ({ apiKeyHeaders, ownerApi }, testInfo) => {
+        const baseUrl = baseUrlFor(testInfo.project.name);
+        const payload = {
+          kees_id: Number(`${Date.now()}`.slice(-8)) * 10 + Math.floor(Math.random() * 10),
+          description: "1'; DROP TABLE bookkeeping_entries; --",
+          customer_name: "Robert'); DROP TABLE facturen;--",
+        };
+        const res = await fetch(`${baseUrl}/api/bookkeeping-entries`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...apiKeyHeaders },
+          body: JSON.stringify(payload),
+        });
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        // Stored verbatim as plain strings — parameterized queries never interpret them as SQL.
+        expect(body.description).toBe(payload.description);
+        expect(body.customer_name).toBe(payload.customer_name);
+
+        // The real proof nothing landed: both tables the payload named are still queryable,
+        // including through the Compare endpoint that reads them together.
+        expect((await ownerApi.get("/api/bookkeeping-entries")).status()).toBe(200);
+        expect((await ownerApi.get("/api/facturen")).status()).toBe(200);
+        expect((await ownerApi.get("/api/bookkeeping/compare")).status()).toBe(200);
+      }
+    );
+
+    test(
+      "script-tag-shaped strings in a bookkeeping entry are stored verbatim, not executed",
+      { tag: "@security" },
+      async ({ apiKeyHeaders }, testInfo) => {
+        const baseUrl = baseUrlFor(testInfo.project.name);
+        const payload = {
+          kees_id: Number(`${Date.now()}`.slice(-8)) * 10 + Math.floor(Math.random() * 10),
+          invoice_number: `XSS-${Date.now()}`,
+          description: "<script>alert(1)</script>",
+          customer_name: "<img src=x onerror=alert(1)>",
+        };
+        const res = await fetch(`${baseUrl}/api/bookkeeping-entries`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...apiKeyHeaders },
+          body: JSON.stringify(payload),
+        });
+        expect(res.status).toBe(200);
+        const body = await res.json();
+        expect(body.description).toBe(payload.description);
+        expect(body.customer_name).toBe(payload.customer_name);
       }
     );
   });

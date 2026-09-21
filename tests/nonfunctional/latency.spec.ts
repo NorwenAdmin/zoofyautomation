@@ -11,7 +11,15 @@ function percentile(sortedAsc: number[], p: number): number {
 }
 
 test.describe("Non-functional: GET latency", () => {
-  for (const path of ["/api/subscriptions", "/api/appointments", "/api/facturen"]) {
+  // /api/bookkeeping/compare is the one to watch here: it cross-matches every factuur against
+  // every bookkeeping entry in Python, so it degrades quadratically as both tables fill up.
+  for (const path of [
+    "/api/subscriptions",
+    "/api/appointments",
+    "/api/facturen",
+    "/api/bookkeeping-entries",
+    "/api/bookkeeping/compare",
+  ]) {
     test(`GET ${path} stays under the p95 latency threshold`, { tag: "@nonfunctional" }, async ({ ownerApi }) => {
       const durations: number[] = [];
       for (let i = 0; i < SAMPLE_COUNT; i++) {
