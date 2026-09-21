@@ -4,11 +4,18 @@
 # payload, and none of these must create a second row.
 from sqlalchemy import select
 
-from app.models import Appointment, Factuur, SubscriptionInvoice
+from app.models import Appointment, BookkeepingEntry, Factuur, SubscriptionInvoice
 from app.routers.appointments import cancel_appointment, create_appointment
+from app.routers.bookkeeping import create_bookkeeping_entry
 from app.routers.facturen import create_factuur
 from app.routers.subscriptions import create_subscription_invoice
-from app.schemas import AppointmentCancelIn, AppointmentIn, FactuurIn, SubscriptionInvoiceIn
+from app.schemas import (
+    AppointmentCancelIn,
+    AppointmentIn,
+    BookkeepingEntryIn,
+    FactuurIn,
+    SubscriptionInvoiceIn,
+)
 
 
 async def test_create_factuur_retry_does_not_duplicate(db_session):
@@ -77,3 +84,64 @@ async def test_cancel_appointment_creates_stub_then_confirmation_fills_it_in(db_
     assert len(rows) == 1  # still one row, not a second one
     assert rows[0].appointment_date is not None
     assert rows[0].cancelled_at is not None  # the earlier cancellation is preserved
+
+
+async def test_create_bookkeeping_entry_retry_does_not_duplicate(db_session):
+    payload = BookkeepingEntryIn(kees_id=9001, invoice_number="2026-42", amount_incl=121.0)
+
+    first = await create_bookkeeping_entry(payload, db_session)
+    second = await create_bookkeeping_entry(payload, db_session)
+
+    assert first.id == second.id
+    rows = (
+        (await db_session.execute(select(BookkeepingEntry).where(BookkeepingEntry.kees_id == 9001)))
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 1
+
+
+async def test_create_bookkeeping_entry_conflict_keeps_the_first_values(db_session):
+    """The router upserts with ON CONFLICT DO NOTHING (not DO UPDATE) and then re-reads the
+    existing row — so a re-sync of the same kees_id carrying edited values hands back what is
+    already stored instead of overwriting it."""
+    await create_bookkeeping_entry(
+        BookkeepingEntryIn(kees_id=9002, invoice_number="2026-7", state="open", amount_incl=100.0),
+        db_session,
+    )
+
+    returned = await create_bookkeeping_entry(
+        BookkeepingEntryIn(kees_id=9002, invoice_number="CHANGED", state="paid", amount_incl=250.0),
+        db_session,
+    )
+
+    assert returned.invoice_number == "2026-7"
+    assert returned.state == "open"
+
+    # Same identity-map caveat as the appointments test above: the ON CONFLICT statement ran as
+    # a Core statement, so force a re-read rather than trusting the session's cached instance.
+    db_session.expire_all()
+    rows = (
+        (await db_session.execute(select(BookkeepingEntry).where(BookkeepingEntry.kees_id == 9002)))
+        .scalars()
+        .all()
+    )
+    assert len(rows) == 1
+    assert rows[0].invoice_number == "2026-7"
+    assert rows[0].state == "open"
+    assert float(rows[0].amount_incl) == 100.0
+
+
+async def test_create_bookkeeping_entry_round_trips_kees_raw_payload(db_session):
+    """`raw` holds Kees's full API response as JSONB for anything not otherwise mapped — it has
+    to survive the round trip with its nesting intact, not get flattened or stringified."""
+    raw = {"invoiceNr": "2026-9", "lines": [{"desc": "Reparatie", "amount": 60.5}], "meta": {"paid": True}}
+    await create_bookkeeping_entry(BookkeepingEntryIn(kees_id=9003, raw=raw), db_session)
+
+    db_session.expire_all()
+    row = (
+        (await db_session.execute(select(BookkeepingEntry).where(BookkeepingEntry.kees_id == 9003)))
+        .scalars()
+        .one()
+    )
+    assert row.raw == raw
