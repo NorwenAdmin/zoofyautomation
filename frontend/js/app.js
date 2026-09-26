@@ -15,6 +15,8 @@ const missingInBookkeepingBody = document.getElementById("missing-in-bookkeeping
 const missingInBookkeepingEmpty = document.getElementById("missing-in-bookkeeping-empty");
 const missingInFacturenBody = document.getElementById("missing-in-facturen-body");
 const missingInFacturenEmpty = document.getElementById("missing-in-facturen-empty");
+const revenueBody = document.getElementById("revenue-body");
+const revenueEmpty = document.getElementById("revenue-empty");
 
 const tabButtons = document.querySelectorAll(".tab-btn");
 const tabPanels = {
@@ -23,6 +25,7 @@ const tabPanels = {
   facturen: document.getElementById("tab-facturen"),
   map: document.getElementById("tab-map"),
   bookkeeping: document.getElementById("tab-bookkeeping"),
+  revenue: document.getElementById("tab-revenue"),
 };
 
 let leafletMap = null;
@@ -218,6 +221,22 @@ async function loadBookkeepingCompare() {
   }
 }
 
+async function loadRevenue() {
+  const rows = await api("/api/facturen/revenue-by-week");
+  revenueBody.innerHTML = "";
+  revenueEmpty.hidden = rows.length > 0;
+  for (const row of rows) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${row.week_number}</td>
+      <td>${formatDate(row.week_start)} – ${formatDate(row.week_end)}</td>
+      <td>${formatAmount(row.total)}</td>
+      <td>${row.invoice_count}</td>
+    `;
+    revenueBody.appendChild(tr);
+  }
+}
+
 function switchTab(name) {
   for (const btn of tabButtons) {
     btn.classList.toggle("active", btn.dataset.tab === name);
@@ -227,6 +246,7 @@ function switchTab(name) {
   }
   if (name === "map") loadMap();
   if (name === "bookkeeping") loadBookkeepingCompare();
+  if (name === "revenue") loadRevenue();
 }
 
 for (const btn of tabButtons) {

@@ -30,6 +30,7 @@
       <button class="tab-btn" data-tab="facturen">Facturen</button>
       <button class="tab-btn" data-tab="map">Карта</button>
       <button class="tab-btn" data-tab="bookkeeping">Бухгалтерия</button>
+      <button class="tab-btn" data-tab="revenue">Доход</button>
     </nav>
     <main>
       <section id="tab-subscriptions" class="tab-panel">
@@ -126,6 +127,21 @@
           <tbody id="missing-in-facturen-body"></tbody>
         </table>
         <p id="missing-in-facturen-empty" class="empty-state" hidden>Расхождений нет.</p>
+      </section>
+
+      <section id="tab-revenue" class="tab-panel" hidden>
+        <table id="revenue-table">
+          <thead>
+            <tr>
+              <th>Неделя</th>
+              <th>Даты</th>
+              <th>Сумма</th>
+              <th>Кол-во счетов</th>
+            </tr>
+          </thead>
+          <tbody id="revenue-body"></tbody>
+        </table>
+        <p id="revenue-empty" class="empty-state" hidden>Пока нет записей.</p>
       </section>
     </main>
   </div>
