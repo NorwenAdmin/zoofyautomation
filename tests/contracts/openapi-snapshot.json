@@ -623,6 +623,105 @@
           }
         }
       }
+    },
+    "/api/bookkeeping-entries": {
+      "post": {
+        "tags": [
+          "bookkeeping"
+        ],
+        "summary": "Create Bookkeeping Entry",
+        "description": "n8n calls this once per invoice pulled from Kees de Boekhouder. Upsert on kees_id (Kees's\nown numeric id, not invoice_number — see BookkeepingEntry's docstring) — retry-safe the same\nway as every other resource here.",
+        "operationId": "create_bookkeeping_entry_api_bookkeeping_entries_post",
+        "parameters": [
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "",
+              "title": "X-Api-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookkeepingEntryIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookkeepingEntryOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "bookkeeping"
+        ],
+        "summary": "List Bookkeeping Entries",
+        "operationId": "list_bookkeeping_entries_api_bookkeeping_entries_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookkeepingEntryOut"
+                  },
+                  "title": "Response List Bookkeeping Entries Api Bookkeeping Entries Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/bookkeeping/compare": {
+      "get": {
+        "tags": [
+          "bookkeeping"
+        ],
+        "summary": "Compare Bookkeeping",
+        "description": "Diffs facturen (from Zoofy's emails) against bookkeeping_entries (pulled from Kees)\nso n8n can flag invoices Zoofy issued that the accountant hasn't entered yet. Matches on\nfactuur/invoice_number, factuur/file_name, or kenmerk/invoice_number — Kees's invoice_number\nsometimes actually holds the Kenmerk value instead of the real invoice number, and file_name\nstays factuur-shaped even then, so no single field pairing is reliable on its own.\nBoth sides are sorted by date descending (most recent first) so the frontend's two lists\ndon't come back in arbitrary insertion order.",
+        "operationId": "compare_bookkeeping_api_bookkeeping_compare_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookkeepingCompareOut"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -865,6 +964,255 @@
           "file"
         ],
         "title": "Body_upload_subscription_pdf_api_subscriptions__factuur__pdf_post"
+      },
+      "BookkeepingCompareOut": {
+        "properties": {
+          "missing_in_bookkeeping": {
+            "items": {
+              "$ref": "#/components/schemas/FactuurOut"
+            },
+            "type": "array",
+            "title": "Missing In Bookkeeping"
+          },
+          "missing_in_facturen": {
+            "items": {
+              "$ref": "#/components/schemas/BookkeepingEntryOut"
+            },
+            "type": "array",
+            "title": "Missing In Facturen"
+          }
+        },
+        "type": "object",
+        "required": [
+          "missing_in_bookkeeping",
+          "missing_in_facturen"
+        ],
+        "title": "BookkeepingCompareOut"
+      },
+      "BookkeepingEntryIn": {
+        "properties": {
+          "kees_id": {
+            "type": "integer",
+            "title": "Kees Id"
+          },
+          "invoice_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Number"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name"
+          },
+          "amount_incl": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Incl"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "invoice_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Date"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kees_id"
+        ],
+        "title": "BookkeepingEntryIn"
+      },
+      "BookkeepingEntryOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "kees_id": {
+            "type": "integer",
+            "title": "Kees Id"
+          },
+          "invoice_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Number"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "customer_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Name"
+          },
+          "amount_incl": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Incl"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "invoice_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Date"
+          },
+          "raw": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kees_id",
+          "invoice_number",
+          "file_name",
+          "description",
+          "customer_name",
+          "amount_incl",
+          "state",
+          "invoice_date",
+          "raw",
+          "created_at"
+        ],
+        "title": "BookkeepingEntryOut"
       },
       "FactuurIn": {
         "properties": {
@@ -1146,6 +1494,28 @@
             ],
             "title": "Pdf Url"
           },
+          "lat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lat"
+          },
+          "lng": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lng"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time",
@@ -1168,6 +1538,8 @@
           "totaal",
           "thread_link",
           "pdf_url",
+          "lat",
+          "lng",
           "created_at"
         ],
         "title": "FactuurOut"
