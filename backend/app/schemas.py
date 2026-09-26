@@ -148,3 +148,11 @@ class BookkeepingEntryOut(BaseModel):
 class BookkeepingCompareOut(BaseModel):
     missing_in_bookkeeping: list[FactuurOut]
     missing_in_facturen: list[BookkeepingEntryOut]
+
+
+class RevenueByWeekOut(BaseModel):
+    week_number: int
+    week_start: date
+    week_end: date
+    total: float
+    invoice_count: int

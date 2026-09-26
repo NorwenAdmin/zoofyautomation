@@ -1,7 +1,8 @@
+from datetime import timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from sqlalchemy import select
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,7 +10,7 @@ from app.auth import get_current_user, require_n8n_api_key
 from app.db import get_db
 from app.geocoding import geocode_address
 from app.models import Factuur
-from app.schemas import FactuurIn, FactuurOut, FactuurUpdateIn
+from app.schemas import FactuurIn, FactuurOut, FactuurUpdateIn, RevenueByWeekOut
 
 router = APIRouter(prefix="/api/facturen", tags=["facturen"])
 
@@ -92,3 +93,30 @@ async def list_facturen(
 ):
     result = await db.execute(select(Factuur).order_by(Factuur.factuurdatum.desc().nulls_last()))
     return result.scalars().all()
+
+
+@router.get("/revenue-by-week", response_model=list[RevenueByWeekOut])
+async def revenue_by_week(
+    db: AsyncSession = Depends(get_db),
+    _current_user=Depends(get_current_user),
+):
+    """Revenue only — `facturen` (unlike `subscription_invoices`, which is an expense). Rows
+    without a factuurdatum can't be placed in a week, so they're excluded rather than guessed."""
+    week_start = cast(func.date_trunc("week", Factuur.factuurdatum), Date).label("week_start")
+    stmt = (
+        select(week_start, func.sum(Factuur.totaal).label("total"), func.count().label("invoice_count"))
+        .where(Factuur.factuurdatum.is_not(None))
+        .group_by(week_start)
+        .order_by(week_start.desc())
+    )
+    rows = (await db.execute(stmt)).all()
+    return [
+        RevenueByWeekOut(
+            week_number=row.week_start.isocalendar()[1],
+            week_start=row.week_start,
+            week_end=row.week_start + timedelta(days=6),
+            total=row.total,
+            invoice_count=row.invoice_count,
+        )
+        for row in rows
+    ]
