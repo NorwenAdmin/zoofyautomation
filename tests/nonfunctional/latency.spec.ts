@@ -19,6 +19,8 @@ test.describe("Non-functional: GET latency", () => {
     // Compare diffs every factuur against every bookkeeping entry in Python, so it's the most
     // likely of these to degrade as the two tables grow.
     "/api/bookkeeping/compare",
+    // Aggregates every dated factuur with date_trunc + GROUP BY on each request.
+    "/api/facturen/revenue-by-week",
   ]) {
     test(`GET ${path} stays under the p95 latency threshold`, { tag: "@nonfunctional" }, async ({ ownerApi }) => {
       const durations: number[] = [];
