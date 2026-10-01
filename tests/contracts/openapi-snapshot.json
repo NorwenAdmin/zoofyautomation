@@ -624,6 +624,32 @@
         }
       }
     },
+    "/api/facturen/revenue-by-week": {
+      "get": {
+        "tags": [
+          "facturen"
+        ],
+        "summary": "Revenue By Week",
+        "description": "Revenue only — `facturen` (unlike `subscription_invoices`, which is an expense). Rows\nwithout a factuurdatum can't be placed in a week, so they're excluded rather than guessed.",
+        "operationId": "revenue_by_week_api_facturen_revenue_by_week_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RevenueByWeekOut"
+                  },
+                  "type": "array",
+                  "title": "Response Revenue By Week Api Facturen Revenue By Week Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/bookkeeping-entries": {
       "post": {
         "tags": [
@@ -1638,6 +1664,41 @@
           "name"
         ],
         "title": "RegisterIn"
+      },
+      "RevenueByWeekOut": {
+        "properties": {
+          "week_number": {
+            "type": "integer",
+            "title": "Week Number"
+          },
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          },
+          "week_end": {
+            "type": "string",
+            "format": "date",
+            "title": "Week End"
+          },
+          "total": {
+            "type": "number",
+            "title": "Total"
+          },
+          "invoice_count": {
+            "type": "integer",
+            "title": "Invoice Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "week_number",
+          "week_start",
+          "week_end",
+          "total",
+          "invoice_count"
+        ],
+        "title": "RevenueByWeekOut"
       },
       "SubscriptionInvoiceIn": {
         "properties": {
