@@ -156,6 +156,24 @@ a {
   border-radius: 8px;
 }
 
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.map-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  border: 1px solid #1a1a1a;
+  vertical-align: middle;
+}
+
 #tab-bookkeeping h2 {
   font-size: 1rem;
   color: var(--text-dim);
