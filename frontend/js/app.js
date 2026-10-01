@@ -232,6 +232,7 @@ async function loadRevenue() {
       <td>${formatDate(row.week_start)} – ${formatDate(row.week_end)}</td>
       <td>${formatAmount(row.total)}</td>
       <td>${row.invoice_count}</td>
+      <td>${formatAmount(row.total / row.invoice_count)}</td>
     `;
     revenueBody.appendChild(tr);
   }
