@@ -32,6 +32,8 @@ let leafletMap = null;
 let mapMarkers = null;
 
 const STALE_PENDING_DAYS = 60;
+const DEFAULT_TAB = "subscriptions";
+const ACTIVE_TAB_KEY = "zoofyautomation:activeTab";
 
 async function api(path, options = {}) {
   const res = await fetch(path, {
@@ -245,9 +247,22 @@ function switchTab(name) {
   for (const [key, panel] of Object.entries(tabPanels)) {
     panel.hidden = key !== name;
   }
+  // Per-viewer convenience only (which tab was open) — safe to lose in a private window or
+  // with site data cleared, so every access is wrapped rather than assumed to succeed.
+  try {
+    localStorage.setItem(ACTIVE_TAB_KEY, name);
+  } catch {}
   if (name === "map") loadMap();
   if (name === "bookkeeping") loadBookkeepingCompare();
   if (name === "revenue") loadRevenue();
+}
+
+function restoreActiveTab() {
+  let saved = null;
+  try {
+    saved = localStorage.getItem(ACTIVE_TAB_KEY);
+  } catch {}
+  switchTab(saved && tabPanels[saved] ? saved : DEFAULT_TAB);
 }
 
 for (const btn of tabButtons) {
@@ -258,6 +273,7 @@ async function showApp() {
   loginView.hidden = true;
   appView.hidden = false;
   await Promise.all([loadSubscriptions(), loadAppointments(), loadFacturen()]);
+  restoreActiveTab();
 }
 
 async function init() {
