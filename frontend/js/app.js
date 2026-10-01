@@ -150,6 +150,49 @@ async function loadFacturen() {
   }
 }
 
+// Grasweg 3L3, 1031HW Amsterdam — geocoded once via Nominatim, hardcoded since it never changes.
+const HOME_COORDS = [52.3882496, 4.9038942];
+
+// WoW item-rarity colors, indexed by price tier (0 = Poor .. 5 = Legendary). Boundaries are the
+// real quartiles/percentiles of facturen.totaal (p25≈65, p50≈96→100, p75≈150, p90≈276, p97≈439),
+// not guessed round numbers.
+const TIER_COLORS = ["#9d9d9d", "#ffffff", "#1eff00", "#0070dd", "#a335ee", "#ff8000"];
+
+function priceTier(totaal) {
+  if (totaal == null) return 0;
+  if (totaal < 65) return 0;
+  if (totaal < 100) return 1;
+  if (totaal < 150) return 2;
+  if (totaal < 275) return 3;
+  if (totaal < 440) return 4;
+  return 5;
+}
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Bonus for being close to home: super-close (<500m) jobs are rarer-feeling than the price alone
+// would suggest, down to "it's basically next door" — tapering off to 0 past Utrecht's distance.
+function geoBonus(lat, lng) {
+  const km = haversineKm(HOME_COORDS[0], HOME_COORDS[1], lat, lng);
+  if (km < 0.5) return 3;
+  if (km < 15) return 2;
+  if (km < 36.25) return 1;
+  return 0;
+}
+
+function tierColor(row) {
+  const tier = Math.min(5, priceTier(row.totaal) + geoBonus(row.lat, row.lng));
+  return TIER_COLORS[tier];
+}
+
 function ensureMap() {
   if (leafletMap) return;
   // Amsterdam-centered default view — every job so far is in/near NL, and there's nothing
@@ -160,6 +203,15 @@ function ensureMap() {
     attribution: "&copy; OpenStreetMap contributors",
   }).addTo(leafletMap);
   mapMarkers = L.layerGroup().addTo(leafletMap);
+  L.circleMarker(HOME_COORDS, {
+    radius: 9,
+    color: "#ffffff",
+    weight: 2,
+    fillColor: "#e60000",
+    fillOpacity: 1,
+  })
+    .bindPopup("🏠 Дом")
+    .addTo(leafletMap);
 }
 
 async function loadMap() {
@@ -170,10 +222,17 @@ async function loadMap() {
 
   mapMarkers.clearLayers();
   for (const row of withCoords) {
-    const marker = L.marker([row.lat, row.lng]);
+    const marker = L.circleMarker([row.lat, row.lng], {
+      radius: 7,
+      color: "#1a1a1a",
+      weight: 1.5,
+      fillColor: tierColor(row),
+      fillOpacity: 0.9,
+    });
     marker.bindPopup(`
       <strong>${row.klusomschrijving || "Klus"}</strong><br>
       ${row.klusadres || ""}<br>
+      ${formatAmount(row.totaal)}<br>
       ${formatDate(row.factuurdatum)}${row.thread_link ? ` · <a href="${row.thread_link}" target="_blank">Письмо</a>` : ""}
     `);
     mapMarkers.addLayer(marker);
@@ -184,7 +243,7 @@ async function loadMap() {
   setTimeout(() => {
     leafletMap.invalidateSize();
     if (withCoords.length > 0) {
-      leafletMap.fitBounds(withCoords.map((r) => [r.lat, r.lng]), { padding: [20, 20] });
+      leafletMap.fitBounds([...withCoords.map((r) => [r.lat, r.lng]), HOME_COORDS], { padding: [20, 20] });
     }
   }, 0);
 }
