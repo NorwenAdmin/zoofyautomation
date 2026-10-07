@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -13,8 +13,8 @@
     <form id="login-form" class="login-form">
       <h1>Zoofy Automation</h1>
       <input type="email" id="email" placeholder="Email" required autocomplete="username" />
-      <input type="password" id="password" placeholder="Пароль" required autocomplete="current-password" />
-      <button type="submit">Войти</button>
+      <input type="password" id="password" placeholder="Password" required autocomplete="current-password" />
+      <button type="submit">Sign in</button>
       <p id="login-error" class="error"></p>
     </form>
   </div>
@@ -22,72 +22,72 @@
   <div id="app-view" class="view" hidden>
     <header>
       <h1>Zoofy Automation</h1>
-      <button id="logout-btn">Выйти</button>
+      <button id="logout-btn">Sign out</button>
     </header>
     <nav class="tabs">
-      <button class="tab-btn active" data-tab="subscriptions">Подписка Zoofy</button>
-      <button class="tab-btn" data-tab="appointments">График работ</button>
-      <button class="tab-btn" data-tab="facturen">Facturen</button>
-      <button class="tab-btn" data-tab="map">Карта</button>
-      <button class="tab-btn" data-tab="bookkeeping">Бухгалтерия</button>
-      <button class="tab-btn" data-tab="revenue">Доход</button>
+      <button class="tab-btn active" data-tab="subscriptions">Zoofy subscription</button>
+      <button class="tab-btn" data-tab="appointments">Schedule</button>
+      <button class="tab-btn" data-tab="facturen">Invoices</button>
+      <button class="tab-btn" data-tab="map">Map</button>
+      <button class="tab-btn" data-tab="bookkeeping">Bookkeeping</button>
+      <button class="tab-btn" data-tab="revenue">Revenue</button>
     </nav>
     <main>
       <section id="tab-subscriptions" class="tab-panel">
         <table id="subscriptions-table">
           <thead>
             <tr>
-              <th>Factuur</th>
-              <th>Kenmerk</th>
-              <th>Factuurdatum</th>
-              <th>Vervaldatum</th>
-              <th>Сумма</th>
-              <th>Письмо</th>
+              <th>Invoice</th>
+              <th>Reference</th>
+              <th>Invoice date</th>
+              <th>Due date</th>
+              <th>Amount</th>
+              <th>Email</th>
               <th>PDF</th>
             </tr>
           </thead>
           <tbody id="subscriptions-body"></tbody>
         </table>
-        <p id="subscriptions-empty" class="empty-state" hidden>Пока нет записей.</p>
+        <p id="subscriptions-empty" class="empty-state" hidden>No records yet.</p>
       </section>
 
       <section id="tab-appointments" class="tab-panel" hidden>
         <table id="appointments-table">
           <thead>
             <tr>
-              <th>Klusnummer</th>
-              <th>Klus</th>
-              <th>Дата</th>
-              <th>Начало</th>
-              <th>Конец</th>
-              <th>Статус</th>
-              <th>Письмо</th>
+              <th>Job number</th>
+              <th>Job</th>
+              <th>Date</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Status</th>
+              <th>Email</th>
             </tr>
           </thead>
           <tbody id="appointments-body"></tbody>
         </table>
-        <p id="appointments-empty" class="empty-state" hidden>Пока нет записей.</p>
+        <p id="appointments-empty" class="empty-state" hidden>No records yet.</p>
       </section>
 
       <section id="tab-facturen" class="tab-panel" hidden>
         <table id="facturen-table">
           <thead>
             <tr>
-              <th>Factuur</th>
-              <th>Klant</th>
-              <th>Klusnummer</th>
-              <th>Klusomschrijving</th>
-              <th>Klusadres</th>
-              <th>Factuurdatum</th>
-              <th>Vervaldatum</th>
-              <th>Totaal</th>
-              <th>Письмо</th>
+              <th>Invoice</th>
+              <th>Customer</th>
+              <th>Job number</th>
+              <th>Job description</th>
+              <th>Job address</th>
+              <th>Invoice date</th>
+              <th>Due date</th>
+              <th>Total</th>
+              <th>Email</th>
               <th>PDF</th>
             </tr>
           </thead>
           <tbody id="facturen-body"></tbody>
         </table>
-        <p id="facturen-empty" class="empty-state" hidden>Пока нет записей.</p>
+        <p id="facturen-empty" class="empty-state" hidden>No records yet.</p>
       </section>
 
       <section id="tab-map" class="tab-panel" hidden>
@@ -99,60 +99,60 @@
           <span><i style="background:#0070dd"></i>Rare €150–275</span>
           <span><i style="background:#a335ee"></i>Epic €275–440</span>
           <span><i style="background:#ff8000"></i>Legendary €440+</span>
-          <span><i style="background:#e60000;border-radius:50%"></i>Дом</span>
-          <span>Бонусы (напр. Acceptatie) без адреса на карте не показаны</span>
+          <span><i style="background:#e60000;border-radius:50%"></i>Home</span>
+          <span>Bonus payouts (e.g. Acceptatie) have no address and are not shown on the map</span>
         </div>
-        <p id="map-empty" class="empty-state" hidden>Пока нет адресов с координатами.</p>
+        <p id="map-empty" class="empty-state" hidden>No geocoded addresses yet.</p>
       </section>
 
       <section id="tab-bookkeeping" class="tab-panel" hidden>
-        <h2>Выставлено, но нет у бухгалтера</h2>
+        <h2>Invoiced, but missing from the accountant's books</h2>
         <table id="missing-in-bookkeeping-table">
           <thead>
             <tr>
-              <th>Factuur</th>
-              <th>Kenmerk</th>
-              <th>Klant</th>
-              <th>Totaal</th>
-              <th>Factuurdatum</th>
-              <th>Письмо</th>
+              <th>Invoice</th>
+              <th>Reference</th>
+              <th>Customer</th>
+              <th>Total</th>
+              <th>Invoice date</th>
+              <th>Email</th>
             </tr>
           </thead>
           <tbody id="missing-in-bookkeeping-body"></tbody>
         </table>
-        <p id="missing-in-bookkeeping-empty" class="empty-state" hidden>Расхождений нет.</p>
+        <p id="missing-in-bookkeeping-empty" class="empty-state" hidden>No discrepancies.</p>
 
-        <h2>Есть у бухгалтера, но нет у нас</h2>
+        <h2>In the accountant's books, but missing from our invoices</h2>
         <table id="missing-in-facturen-table">
           <thead>
             <tr>
-              <th>Invoice Nr</th>
-              <th>File Name</th>
-              <th>Klant</th>
-              <th>Сумма</th>
-              <th>Дата</th>
-              <th>Статус</th>
+              <th>Invoice no.</th>
+              <th>File name</th>
+              <th>Customer</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody id="missing-in-facturen-body"></tbody>
         </table>
-        <p id="missing-in-facturen-empty" class="empty-state" hidden>Расхождений нет.</p>
+        <p id="missing-in-facturen-empty" class="empty-state" hidden>No discrepancies.</p>
       </section>
 
       <section id="tab-revenue" class="tab-panel" hidden>
         <table id="revenue-table">
           <thead>
             <tr>
-              <th>Неделя</th>
-              <th>Даты</th>
-              <th>Сумма</th>
-              <th>Кол-во счетов</th>
-              <th>Средний чек</th>
+              <th>Week</th>
+              <th>Dates</th>
+              <th>Amount</th>
+              <th>Invoices</th>
+              <th>Avg. invoice</th>
             </tr>
           </thead>
           <tbody id="revenue-body"></tbody>
         </table>
-        <p id="revenue-empty" class="empty-state" hidden>Пока нет записей.</p>
+        <p id="revenue-empty" class="empty-state" hidden>No records yet.</p>
       </section>
     </main>
   </div>

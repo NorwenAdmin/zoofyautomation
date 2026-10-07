@@ -61,23 +61,23 @@ function formatDate(value) {
 function formatDateTime(value) {
   if (!value) return "";
   const d = new Date(value);
-  return d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-// "Выполнено" is checked FIRST, ahead of cancellation — a real factuur means the job actually
+// "Completed" is checked FIRST, ahead of cancellation — a real factuur means the job actually
 // happened and got invoiced, which takes priority even over a stray cancellation email for the
 // same klusnummer. Once that's ruled out, the stale-pending fallback below is safe to use: it
 // used to risk mislabeling genuinely-completed old visits as cancelled, but now that a real
 // completion is caught first, anything left really is just an old visit nobody followed up on.
 function appointmentStatus(row, completedKlusnummers) {
-  if (completedKlusnummers.has(row.klusnummer)) return "✅ Выполнено";
-  if (row.cancelled_at) return "❌ Отменено";
+  if (completedKlusnummers.has(row.klusnummer)) return "✅ Completed";
+  if (row.cancelled_at) return "❌ Cancelled";
   if (row.appointment_date) {
     const staleCutoff = new Date();
     staleCutoff.setDate(staleCutoff.getDate() - STALE_PENDING_DAYS);
-    if (new Date(row.appointment_date) < staleCutoff) return "❌ Отменено через саппорт";
+    if (new Date(row.appointment_date) < staleCutoff) return "❌ Cancelled via support";
   }
-  return "Ожидается";
+  return "Pending";
 }
 
 async function loadSubscriptions() {
@@ -92,7 +92,7 @@ async function loadSubscriptions() {
       <td>${formatDate(row.factuurdatum)}</td>
       <td>${formatDate(row.vervaldatum)}</td>
       <td>${formatAmount(row.amount)}</td>
-      <td>${row.thread_link ? `<a href="${row.thread_link}" target="_blank">Открыть</a>` : ""}</td>
+      <td>${row.thread_link ? `<a href="${row.thread_link}" target="_blank">Open</a>` : ""}</td>
       <td>${row.pdf_url ? `<a href="${row.pdf_url}" target="_blank">PDF</a>` : ""}</td>
     `;
     subscriptionsBody.appendChild(tr);
@@ -114,7 +114,7 @@ async function loadAppointments() {
       <td>${formatDateTime(row.start_time)}</td>
       <td>${formatDateTime(row.end_time)}</td>
       <td>${appointmentStatus(row, completedKlusnummers)}</td>
-      <td>${link ? `<a href="${link}" target="_blank">Открыть</a>` : ""}</td>
+      <td>${link ? `<a href="${link}" target="_blank">Open</a>` : ""}</td>
     `;
     appointmentsBody.appendChild(tr);
   }
@@ -143,7 +143,7 @@ async function loadFacturen() {
       <td>${formatDate(row.factuurdatum)}</td>
       <td>${formatDate(row.vervaldatum)}</td>
       <td>${formatAmount(row.totaal)}</td>
-      <td>${row.thread_link ? `<a href="${row.thread_link}" target="_blank">Открыть</a>` : ""}</td>
+      <td>${row.thread_link ? `<a href="${row.thread_link}" target="_blank">Open</a>` : ""}</td>
       <td>${row.pdf_url ? `<a href="${row.pdf_url}" target="_blank">PDF</a>` : ""}</td>
     `;
     facturenBody.appendChild(tr);
@@ -210,7 +210,7 @@ function ensureMap() {
     fillColor: "#e60000",
     fillOpacity: 1,
   })
-    .bindPopup("🏠 Дом")
+    .bindPopup("🏠 Home")
     .addTo(leafletMap);
 }
 
@@ -230,10 +230,10 @@ async function loadMap() {
       fillOpacity: 0.9,
     });
     marker.bindPopup(`
-      <strong>${row.klusomschrijving || "Klus"}</strong><br>
+      <strong>${row.klusomschrijving || "Job"}</strong><br>
       ${row.klusadres || ""}<br>
       ${formatAmount(row.totaal)}<br>
-      ${formatDate(row.factuurdatum)}${row.thread_link ? ` · <a href="${row.thread_link}" target="_blank">Письмо</a>` : ""}
+      ${formatDate(row.factuurdatum)}${row.thread_link ? ` · <a href="${row.thread_link}" target="_blank">Email</a>` : ""}
     `);
     mapMarkers.addLayer(marker);
   }
@@ -261,7 +261,7 @@ async function loadBookkeepingCompare() {
       <td>${row.klant || ""}</td>
       <td>${formatAmount(row.totaal)}</td>
       <td>${formatDate(row.factuurdatum)}</td>
-      <td>${row.thread_link ? `<a href="${row.thread_link}" target="_blank">Открыть</a>` : ""}</td>
+      <td>${row.thread_link ? `<a href="${row.thread_link}" target="_blank">Open</a>` : ""}</td>
     `;
     missingInBookkeepingBody.appendChild(tr);
   }
