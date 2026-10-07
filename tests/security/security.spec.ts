@@ -25,6 +25,65 @@ test.describe("Security", () => {
     }
   );
 
+  test(
+    "self-registration is closed once an account exists",
+    { tag: "@security" },
+    async ({}, testInfo) => {
+      // A rejected POST creates nothing, but if this ever regressed it would mint a real account,
+      // so it follows the mutating-checks-are-mock-only convention (US-3).
+      test.skip(testInfo.project.name === "live", "mutating checks are mock-only (US-3)");
+      const baseUrl = baseUrlFor(testInfo.project.name);
+      const creds = { email: `intruder-${Date.now()}@zoofy-test.nl`, password: "intruder-pass-123", name: "Intruder" };
+      const res = await fetch(`${baseUrl}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(creds),
+      });
+      expect(res.status).toBe(403);
+
+      // ...and no usable account was created behind the rejection.
+      const login = await fetch(`${baseUrl}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: creds.email, password: creds.password }),
+      });
+      expect(login.status).toBe(401);
+    }
+  );
+
+  test(
+    "uploaded files (invoice PDFs) are not served without a session",
+    { tag: "@security" },
+    async ({}, testInfo) => {
+      const baseUrl = baseUrlFor(testInfo.project.name);
+      for (const path of ["/uploads/gmail/facturen/1.pdf", "/uploads/gmail/subscriptions/anything.pdf"]) {
+        const res = await fetch(`${baseUrl}${path}`);
+        expect(res.status, `GET ${path} without a session`).toBe(401);
+      }
+    }
+  );
+
+  test(
+    "uploads route 404s unknown files and refuses path traversal even when logged in",
+    { tag: "@security" },
+    async ({ ownerApi }) => {
+      const missing = await ownerApi.get("/uploads/gmail/facturen/definitely-not-there.pdf");
+      expect(missing.status()).toBe(404);
+
+      // The encoded slashes survive URL normalisation, get decoded by the server, and would
+      // resolve outside the uploads root (to files that exist in the mock container and on the
+      // VPS) if the route did not check containment.
+      for (const traversal of [
+        "..%2F..%2Fbackend%2Fapp%2Fmain.py",
+        "..%2F..%2F..%2Fetc%2Fpasswd",
+        "gmail%2F..%2F..%2Fbackend%2F.env",
+      ]) {
+        const res = await ownerApi.get(`/uploads/${traversal}`);
+        expect(res.status(), `traversal attempt ${traversal}`).toBe(404);
+      }
+    }
+  );
+
   // Fixed ids in a band no other spec uses (contracts/bookkeeping.spec.ts mints ids below
   // 1_000_000_000), so these rows can never collide with another test's upsert key.
   const SECURITY_KEES_ID_SQL = 1_500_000_001;
