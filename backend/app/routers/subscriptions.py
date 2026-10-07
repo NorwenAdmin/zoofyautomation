@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user, require_n8n_api_key
 from app.db import get_db
-from app.models import SubscriptionInvoice
+from app.demo import demo_subscription
+from app.models import SubscriptionInvoice, User
 from app.schemas import SubscriptionInvoiceIn, SubscriptionInvoiceOut
 
 router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
@@ -66,9 +67,12 @@ async def upload_subscription_pdf(factuur: str, file: UploadFile = File(...), db
 @router.get("", response_model=list[SubscriptionInvoiceOut])
 async def list_subscription_invoices(
     db: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(
         select(SubscriptionInvoice).order_by(SubscriptionInvoice.factuurdatum.desc().nulls_last())
     )
-    return result.scalars().all()
+    rows = result.scalars().all()
+    if current_user.is_demo:
+        return [demo_subscription(SubscriptionInvoiceOut.model_validate(r)) for r in rows]
+    return rows

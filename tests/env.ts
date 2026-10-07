@@ -16,6 +16,11 @@ export const MOCK_OWNER_EMAIL = "test-owner@example.com";
 export const MOCK_OWNER_PASSWORD = "test-password-123";
 export const MOCK_OWNER_NAME = "Test Owner";
 
+// Throwaway demo account, created inside the mock container by scripts/run-mock.sh (registration is
+// closed, so it cannot be made over HTTP). The two values must match the ones run-mock.sh exports.
+export const MOCK_DEMO_EMAIL = "demo@zoofy-test.nl";
+export const MOCK_DEMO_PASSWORD = "demo-password-123";
+
 export function baseUrlFor(projectName: string): string {
   return projectName === "live" ? LIVE_BASE_URL : MOCK_BASE_URL;
 }

@@ -21,5 +21,9 @@ npx tsx "$ROOT_DIR/tests/scripts/wait-for-health.ts"
 echo "== Seeding mock owner account =="
 npx tsx "$ROOT_DIR/tests/scripts/seed-owner.ts"
 
+echo "== Creating mock demo account (registration is closed, so not over HTTP) =="
+# Keep in sync with MOCK_DEMO_EMAIL / MOCK_DEMO_PASSWORD in tests/env.ts.
+$COMPOSE exec -T -e DEMO_EMAIL="demo@zoofy-test.nl" -e DEMO_PASSWORD="demo-password-123" app python -m app.create_demo_user
+
 echo "== Running Playwright (mock project) =="
 npx playwright test --project=mock "$@"

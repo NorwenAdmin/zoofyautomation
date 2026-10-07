@@ -50,6 +50,21 @@ Nominatim API).
 Run the test suites from `tests/` (`npm run test:mock`) and `backend/tests/run.sh` (pytest,
 brings up its own throwaway Postgres).
 
+## Accounts and the demo user
+
+Self-registration only works on an empty database (the owner bootstrap); after that it returns 403, so
+every other account is created on the server. Uploaded files (`/uploads/...`) need a login too.
+
+The **demo account** reads the owner's rows through an anonymiser (`backend/app/demo.py`): prices become a
+stable pseudo-random EUR 30-40, links point at dummy URLs, addresses lose house numbers and postcode
+letters, coordinates are nudged by ~200 m, and the raw bookkeeping payload and the real PDFs are withheld.
+It stays current with the real data, so it is safe to show in a demo or screenshot.
+
+```bash
+cd backend && DEMO_PASSWORD='choose-one' .venv/bin/python -m app.create_demo_user
+# creates (or resets the password of) demo@zoofyautomation.norwen.nl; override with DEMO_EMAIL
+```
+
 ## Deploy
 
 ```bash

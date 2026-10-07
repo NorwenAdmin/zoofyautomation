@@ -4,6 +4,8 @@ import {
   LIVE_OWNER_EMAIL,
   LIVE_OWNER_PASSWORD,
   MOCK_API_KEY,
+  MOCK_DEMO_EMAIL,
+  MOCK_DEMO_PASSWORD,
   MOCK_OWNER_EMAIL,
   MOCK_OWNER_PASSWORD,
 } from "../env.js";
@@ -13,6 +15,7 @@ import {
 // only — the "live" project is read-only, see US-3, so it never needs the API key).
 type Fixtures = {
   ownerApi: APIRequestContext;
+  demoApi: APIRequestContext;
   apiKeyHeaders: Record<string, string>;
 };
 
@@ -36,6 +39,24 @@ export const test = base.extend<Fixtures>({
     });
     if (!loginRes.ok()) {
       throw new Error(`Owner login failed against ${baseURL}: HTTP ${loginRes.status()} — ${await loginRes.text()}`);
+    }
+    await use(context);
+    await context.dispose();
+  },
+
+  // Mock only: the demo account is created by run-mock.sh and does not exist on the live deployment
+  // as far as the tests are concerned (they never hold its credentials).
+  demoApi: async ({ playwright: _pw }, use, testInfo) => {
+    if (testInfo.project.name === "live") {
+      throw new Error("demoApi was used in the 'live' project — demo checks are mock-only");
+    }
+    const baseURL = baseUrlFor(testInfo.project.name);
+    const context = await request.newContext({ baseURL });
+    const loginRes = await context.post("/api/auth/login", {
+      data: { email: MOCK_DEMO_EMAIL, password: MOCK_DEMO_PASSWORD },
+    });
+    if (!loginRes.ok()) {
+      throw new Error(`Demo login failed against ${baseURL}: HTTP ${loginRes.status()} — ${await loginRes.text()}`);
     }
     await use(context);
     await context.dispose();
