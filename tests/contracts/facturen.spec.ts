@@ -206,7 +206,6 @@ test.describe(`Contract: ${PATH}`, () => {
       const { op } = await patchOperation(baseUrl);
       test.skip(!op, NOT_IN_CONTRACT);
 
-      const before = await (await ownerApi.get("/api/facturen")).json();
       // 404 is what the sibling POST /api/facturen/{factuur_id}/pdf returns for a missing row;
       // the contract documents no 404, so the real assertion is "not 200, and nothing created".
       const res = await fetch(`${baseUrl}/api/facturen/999999999`, {
@@ -216,8 +215,10 @@ test.describe(`Contract: ${PATH}`, () => {
       });
       expect(res.status).toBe(404);
 
+      // Assert on the ghost row itself, not on the table's row count: other specs insert facturen
+      // concurrently into the same mock database, so a count taken before and after is racy.
       const after = await (await ownerApi.get("/api/facturen")).json();
-      expect(after).toHaveLength(before.length);
+      expect(after.some((f: any) => f.id === 999999999 || f.klusnummer === "K-GHOST")).toBe(false);
     });
   });
 });

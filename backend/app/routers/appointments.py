@@ -5,7 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user, require_n8n_api_key
 from app.db import get_db
-from app.models import Appointment
+from app.demo import demo_appointment
+from app.models import Appointment, User
 from app.schemas import AppointmentCancelIn, AppointmentIn, AppointmentOut
 
 router = APIRouter(prefix="/api/appointments", tags=["appointments"])
@@ -66,9 +67,12 @@ async def cancel_appointment(klusnummer: str, payload: AppointmentCancelIn, db: 
 @router.get("", response_model=list[AppointmentOut])
 async def list_appointments(
     db: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(
         select(Appointment).order_by(Appointment.appointment_date.desc().nulls_last())
     )
-    return result.scalars().all()
+    rows = result.scalars().all()
+    if current_user.is_demo:
+        return [demo_appointment(AppointmentOut.model_validate(r)) for r in rows]
+    return rows

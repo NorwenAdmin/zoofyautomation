@@ -8,8 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user, require_n8n_api_key
 from app.db import get_db
+from app.demo import demo_factuur, demo_revenue_by_week
 from app.geocoding import geocode_address
-from app.models import Factuur
+from app.models import Factuur, User
 from app.schemas import FactuurIn, FactuurOut, FactuurUpdateIn, RevenueByWeekOut
 
 router = APIRouter(prefix="/api/facturen", tags=["facturen"])
@@ -89,19 +90,28 @@ async def upload_factuur_pdf(factuur_id: int, file: UploadFile = File(...), db: 
 @router.get("", response_model=list[FactuurOut])
 async def list_facturen(
     db: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     result = await db.execute(select(Factuur).order_by(Factuur.factuurdatum.desc().nulls_last()))
-    return result.scalars().all()
+    rows = result.scalars().all()
+    if current_user.is_demo:
+        return [demo_factuur(FactuurOut.model_validate(r)) for r in rows]
+    return rows
 
 
 @router.get("/revenue-by-week", response_model=list[RevenueByWeekOut])
 async def revenue_by_week(
     db: AsyncSession = Depends(get_db),
-    _current_user=Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
     """Revenue only — `facturen` (unlike `subscription_invoices`, which is an expense). Rows
     without a factuurdatum can't be placed in a week, so they're excluded rather than guessed."""
+    if current_user.is_demo:
+        dated = (
+            await db.execute(select(Factuur.id, Factuur.factuurdatum).where(Factuur.factuurdatum.is_not(None)))
+        ).all()
+        return demo_revenue_by_week([(row.id, row.factuurdatum) for row in dated])
+
     week_start = cast(func.date_trunc("week", Factuur.factuurdatum), Date).label("week_start")
     stmt = (
         select(week_start, func.sum(Factuur.totaal).label("total"), func.count().label("invoice_count"))

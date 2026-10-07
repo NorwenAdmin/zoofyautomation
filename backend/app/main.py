@@ -44,7 +44,9 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 # /uploads/gmail/facturen/<id>.pdf by counting up ids). Registered before the frontend catch-all
 # mount below, otherwise "/" would swallow /uploads requests first.
 @app.get("/uploads/{file_path:path}", include_in_schema=False)
-async def serve_upload(file_path: str, _current_user: User = Depends(get_current_user)):
+async def serve_upload(file_path: str, current_user: User = Depends(get_current_user)):
+    if current_user.is_demo:
+        raise HTTPException(status_code=403, detail="Demo accounts cannot open the real files")
     root = UPLOADS_DIR.resolve()
     target = (root / file_path).resolve()
     if not target.is_relative_to(root) or not target.is_file():
