@@ -38,7 +38,7 @@ class Appointment(Base):
     """A Zoofy job visit. Confirmation and cancellation emails arrive independently and in
     either order, so `cancel` can create a bare stub row (klusnummer + klus only) before the
     confirmation email ever shows up — the confirmation upsert then fills in the rest.
-    "Выполнено" status isn't stored here: it's computed by joining against `facturen` on
+    "Completed" status isn't stored here: it's computed by joining against `facturen` on
     klusnummer once that table exists, same as the original sheet recomputed it on every sort."""
 
     __tablename__ = "appointments"
