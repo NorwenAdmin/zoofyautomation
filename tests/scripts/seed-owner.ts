@@ -1,7 +1,8 @@
 import { MOCK_BASE_URL, MOCK_OWNER_EMAIL, MOCK_OWNER_NAME, MOCK_OWNER_PASSWORD } from "../env.js";
 
-// Idempotent: if this runs twice against the same mock DB (shouldn't normally happen since the
-// stack is torn down between runs), a 400 "already exists" is fine to ignore.
+// Idempotent: registration is bootstrap-only (the first account on an empty database), so if this
+// runs twice against the same mock DB (shouldn't normally happen since the stack is torn down
+// between runs) a 400 "already exists" or 403 "registration closed" is fine to ignore.
 async function main() {
   const res = await fetch(`${MOCK_BASE_URL}/api/auth/register`, {
     method: "POST",
@@ -12,7 +13,7 @@ async function main() {
       name: MOCK_OWNER_NAME,
     }),
   });
-  if (res.ok || res.status === 400) {
+  if (res.ok || res.status === 400 || res.status === 403) {
     console.log(`Seeded mock owner account (status ${res.status}).`);
     return;
   }

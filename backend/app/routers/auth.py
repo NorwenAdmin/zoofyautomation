@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user, hash_password, verify_password
@@ -12,6 +12,11 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserOut)
 async def register(payload: RegisterIn, request: Request, db: AsyncSession = Depends(get_db)):
+    # Bootstrap-only: the first account (the owner) can self-register on an empty database, after
+    # that registration is closed — an open endpoint would let anyone sign up and read every row.
+    if await db.scalar(select(func.count()).select_from(User)):
+        raise HTTPException(status_code=403, detail="Registration is closed")
+
     existing = await db.execute(select(User).where(User.email == payload.email))
     if existing.scalar_one_or_none() is not None:
         raise HTTPException(status_code=400, detail="An account with this email already exists")
