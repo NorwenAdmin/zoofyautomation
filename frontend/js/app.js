@@ -248,6 +248,16 @@ async function loadMap() {
   }, 0);
 }
 
+// One-click PDF download named after the invoice (e.g. "2026-12345.pdf") instead of the internal row
+// id the server stores it under — these invoices get forwarded to the accountant. `download` only
+// applies same-origin (the real files); for the demo account's cross-origin dummy URL the browser
+// ignores it and target="_blank" keeps the app open in this tab.
+function pdfDownloadLink(url, invoiceNumber) {
+  if (!url) return "";
+  const filename = String(invoiceNumber).replace(/[^A-Za-z0-9._-]/g, "_");
+  return `<a href="${url}" download="${filename}.pdf" target="_blank" rel="noopener">PDF</a>`;
+}
+
 async function loadBookkeepingCompare() {
   const { missing_in_bookkeeping, missing_in_facturen } = await api("/api/bookkeeping/compare");
 
@@ -262,6 +272,7 @@ async function loadBookkeepingCompare() {
       <td>${formatAmount(row.totaal)}</td>
       <td>${formatDate(row.factuurdatum)}</td>
       <td>${row.thread_link ? `<a href="${row.thread_link}" target="_blank">Open</a>` : ""}</td>
+      <td>${pdfDownloadLink(row.pdf_url, row.factuur)}</td>
     `;
     missingInBookkeepingBody.appendChild(tr);
   }
