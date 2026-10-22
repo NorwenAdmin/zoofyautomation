@@ -70,16 +70,22 @@ test.describe("Security", () => {
       const missing = await ownerApi.get("/uploads/gmail/facturen/definitely-not-there.pdf");
       expect(missing.status()).toBe(404);
 
-      // The encoded slashes survive URL normalisation, get decoded by the server, and would
-      // resolve outside the uploads root (to files that exist in the mock container and on the
-      // VPS) if the route did not check containment.
+      // The encoded slashes survive URL normalisation, get decoded by the server, and would resolve
+      // outside the uploads root (to files that exist in the mock container and on the VPS) if the
+      // route did not check containment. What counts is that they are REFUSED, never served: on the
+      // bare app (mock) they reach the route's containment check and get 404, while behind nginx
+      // (live) the two that climb above the root get nginx's own 400 before reaching the app at all.
+      // Only a 200 would be a leak.
       for (const traversal of [
         "..%2F..%2Fbackend%2Fapp%2Fmain.py",
         "..%2F..%2F..%2Fetc%2Fpasswd",
         "gmail%2F..%2F..%2Fbackend%2F.env",
       ]) {
         const res = await ownerApi.get(`/uploads/${traversal}`);
-        expect(res.status(), `traversal attempt ${traversal}`).toBe(404);
+        expect([400, 404], `traversal attempt ${traversal}`).toContain(res.status());
+        expect(await res.text(), `traversal attempt ${traversal} must not leak file content`).not.toMatch(
+          /from fastapi|root:x:|DATABASE_URL/
+        );
       }
     }
   );
