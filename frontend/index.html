@@ -107,9 +107,15 @@
 
       <section id="tab-bookkeeping" class="tab-panel" hidden>
         <h2>Invoiced, but missing from the accountant's books</h2>
+        <div class="table-toolbar">
+          <button type="button" id="select-all-btn" class="btn" disabled>Select all</button>
+          <button type="button" id="download-selected-btn" class="btn btn-primary" disabled>Download selected</button>
+          <span id="download-status" class="toolbar-status" role="status" aria-live="polite"></span>
+        </div>
         <table id="missing-in-bookkeeping-table">
           <thead>
             <tr>
+              <th class="select-col"></th>
               <th>Invoice</th>
               <th>Reference</th>
               <th>Customer</th>

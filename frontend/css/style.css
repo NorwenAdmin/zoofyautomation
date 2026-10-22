@@ -174,6 +174,63 @@ a {
   vertical-align: middle;
 }
 
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  margin: 0 0 12px;
+}
+
+.btn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.toolbar-status {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.toolbar-status.error {
+  color: var(--error);
+}
+
+.select-col {
+  width: 36px;
+}
+
+.row-select {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.row-select:disabled {
+  cursor: default;
+}
+
 #tab-bookkeeping h2 {
   font-size: 1rem;
   color: var(--text-dim);
