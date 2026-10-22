@@ -624,6 +624,90 @@
         }
       }
     },
+    "/api/facturen/pdfs.zip": {
+      "get": {
+        "tags": [
+          "facturen"
+        ],
+        "summary": "Download Pdfs Zip",
+        "description": "Bundles the stored invoice PDFs for the given facturen ids into one download (the UI's\n\"Download selected\"). All-or-nothing: if any id is unknown or has no file the whole request\nfails, because a silently incomplete archive is exactly the kind of thing that gets forwarded\nto the accountant without anyone noticing.",
+        "operationId": "download_pdfs_zip_api_facturen_pdfs_zip_get",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              },
+              "minItems": 1,
+              "maxItems": 500,
+              "title": "Ids"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ZIP archive with one PDF per requested invoice, named after its invoice number",
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The demo account cannot download the real files"
+          },
+          "404": {
+            "description": "An id is unknown or has no stored PDF — nothing is returned partially"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/facturen/revenue-by-week": {
+      "get": {
+        "tags": [
+          "facturen"
+        ],
+        "summary": "Revenue By Week",
+        "description": "Revenue only — `facturen` (unlike `subscription_invoices`, which is an expense). Rows\nwithout a factuurdatum can't be placed in a week, so they're excluded rather than guessed.",
+        "operationId": "revenue_by_week_api_facturen_revenue_by_week_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RevenueByWeekOut"
+                  },
+                  "type": "array",
+                  "title": "Response Revenue By Week Api Facturen Revenue By Week Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/bookkeeping-entries": {
       "post": {
         "tags": [
@@ -1638,6 +1722,41 @@
           "name"
         ],
         "title": "RegisterIn"
+      },
+      "RevenueByWeekOut": {
+        "properties": {
+          "week_number": {
+            "type": "integer",
+            "title": "Week Number"
+          },
+          "week_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Week Start"
+          },
+          "week_end": {
+            "type": "string",
+            "format": "date",
+            "title": "Week End"
+          },
+          "total": {
+            "type": "number",
+            "title": "Total"
+          },
+          "invoice_count": {
+            "type": "integer",
+            "title": "Invoice Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "week_number",
+          "week_start",
+          "week_end",
+          "total",
+          "invoice_count"
+        ],
+        "title": "RevenueByWeekOut"
       },
       "SubscriptionInvoiceIn": {
         "properties": {

@@ -13,6 +13,9 @@ const facturenEmpty = document.getElementById("facturen-empty");
 const mapEmpty = document.getElementById("map-empty");
 const missingInBookkeepingBody = document.getElementById("missing-in-bookkeeping-body");
 const missingInBookkeepingEmpty = document.getElementById("missing-in-bookkeeping-empty");
+const selectAllBtn = document.getElementById("select-all-btn");
+const downloadSelectedBtn = document.getElementById("download-selected-btn");
+const downloadStatus = document.getElementById("download-status");
 const missingInFacturenBody = document.getElementById("missing-in-facturen-body");
 const missingInFacturenEmpty = document.getElementById("missing-in-facturen-empty");
 const revenueBody = document.getElementById("revenue-body");
@@ -258,6 +261,71 @@ function pdfDownloadLink(url, invoiceNumber) {
   return `<a href="${url}" download="${filename}.pdf" target="_blank" rel="noopener">PDF</a>`;
 }
 
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+function rowCheckboxes() {
+  return [...missingInBookkeepingBody.querySelectorAll(".row-select:not(:disabled)")];
+}
+
+function selectedInvoiceIds() {
+  return rowCheckboxes()
+    .filter((cb) => cb.checked)
+    .map((cb) => Number(cb.dataset.id));
+}
+
+// Keeps both buttons in step with the checkboxes: "Download selected" needs at least one ticked box
+// and shows how many; "Select all" turns into "Deselect all" once everything selectable is ticked.
+function updateSelectionControls() {
+  const boxes = rowCheckboxes();
+  const selected = selectedInvoiceIds().length;
+  selectAllBtn.disabled = boxes.length === 0;
+  selectAllBtn.textContent = boxes.length > 0 && selected === boxes.length ? "Deselect all" : "Select all";
+  downloadSelectedBtn.disabled = selected === 0;
+  downloadSelectedBtn.textContent = selected > 0 ? `Download selected (${selected})` : "Download selected";
+}
+
+function setDownloadStatus(message, isError = false) {
+  downloadStatus.textContent = message;
+  downloadStatus.classList.toggle("error", isError);
+}
+
+// One zip for the whole selection: browsers block or prompt on a burst of separate downloads, and
+// the point is forwarding these invoices to the accountant in one go. fetch + blob (rather than
+// navigating to the URL) so a failure — expired session, demo account, missing file — shows as a
+// message here instead of replacing the page with a JSON error.
+async function downloadSelectedPdfs() {
+  const ids = selectedInvoiceIds();
+  if (ids.length === 0) return;
+
+  selectAllBtn.disabled = true;
+  downloadSelectedBtn.disabled = true;
+  setDownloadStatus("Preparing archive…");
+  try {
+    const query = new URLSearchParams();
+    for (const id of ids) query.append("ids", id);
+    const res = await fetch(`/api/facturen/pdfs.zip?${query}`, { credentials: "include" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.detail || `Download failed (HTTP ${res.status})`);
+    }
+    const url = URL.createObjectURL(await res.blob());
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `invoices-${new Date().toLocaleDateString("en-CA")}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    setDownloadStatus(`Downloaded ${ids.length} PDF${ids.length === 1 ? "" : "s"}`);
+  } catch (err) {
+    setDownloadStatus(err.message, true);
+  } finally {
+    updateSelectionControls();
+  }
+}
+
 async function loadBookkeepingCompare() {
   const { missing_in_bookkeeping, missing_in_facturen } = await api("/api/bookkeeping/compare");
 
@@ -265,7 +333,9 @@ async function loadBookkeepingCompare() {
   missingInBookkeepingEmpty.hidden = missing_in_bookkeeping.length > 0;
   for (const row of missing_in_bookkeeping) {
     const tr = document.createElement("tr");
+    // Unchecked by default; a row with no stored PDF has nothing to download, so it can't be ticked.
     tr.innerHTML = `
+      <td class="select-col"><input type="checkbox" class="row-select" data-id="${row.id}" aria-label="Select invoice ${escapeHtml(row.factuur)}" ${row.pdf_url ? "" : "disabled"}></td>
       <td>${row.factuur}</td>
       <td>${row.kenmerk || ""}</td>
       <td>${row.klant || ""}</td>
@@ -276,6 +346,8 @@ async function loadBookkeepingCompare() {
     `;
     missingInBookkeepingBody.appendChild(tr);
   }
+  setDownloadStatus("");
+  updateSelectionControls();
 
   missingInFacturenBody.innerHTML = "";
   missingInFacturenEmpty.hidden = missing_in_facturen.length > 0;
@@ -338,6 +410,19 @@ function restoreActiveTab() {
 for (const btn of tabButtons) {
   btn.addEventListener("click", () => switchTab(btn.dataset.tab));
 }
+
+missingInBookkeepingBody.addEventListener("change", (e) => {
+  if (e.target.classList.contains("row-select")) updateSelectionControls();
+});
+
+selectAllBtn.addEventListener("click", () => {
+  const boxes = rowCheckboxes();
+  const allSelected = boxes.length > 0 && boxes.every((cb) => cb.checked);
+  for (const cb of boxes) cb.checked = !allSelected;
+  updateSelectionControls();
+});
+
+downloadSelectedBtn.addEventListener("click", downloadSelectedPdfs);
 
 async function showApp() {
   loginView.hidden = true;

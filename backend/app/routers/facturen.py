@@ -1,7 +1,12 @@
-from datetime import timedelta
+import io
+import re
+import zipfile
+from datetime import date, timedelta
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from sqlalchemy import Date, cast, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +23,10 @@ router = APIRouter(prefix="/api/facturen", tags=["facturen"])
 # Sibling of backend/ and frontend/, same reasoning as subscriptions.py — untouched by
 # deploy.sh's rsync --delete. Nested under gmail/, see subscriptions.py's UPLOADS_DIR comment.
 UPLOADS_DIR = Path(__file__).resolve().parents[3] / "uploads" / "gmail" / "facturen"
+
+# The UI has ~240 invoices, so 500 leaves headroom while keeping the in-memory archive (and the
+# query string, which must fit nginx's header buffer) bounded.
+MAX_ZIP_PDFS = 500
 
 
 @router.post("", response_model=FactuurOut, dependencies=[Depends(require_n8n_api_key)])
@@ -97,6 +106,70 @@ async def list_facturen(
     if current_user.is_demo:
         return [demo_factuur(FactuurOut.model_validate(r)) for r in rows]
     return rows
+
+
+def _zip_filename(factuur: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]", "_", factuur) or "invoice"
+
+
+def _build_zip(entries: list[tuple[str, Path]]) -> bytes:
+    buffer = io.BytesIO()
+    # Stored, not deflated: PDFs are already compressed, so deflating costs CPU for ~nothing.
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_STORED) as archive:
+        for name, path in entries:
+            archive.write(path, arcname=name)
+    return buffer.getvalue()
+
+
+@router.get(
+    "/pdfs.zip",
+    responses={
+        200: {
+            "description": "ZIP archive with one PDF per requested invoice, named after its invoice number",
+            "content": {"application/zip": {"schema": {"type": "string", "format": "binary"}}},
+        },
+        403: {"description": "The demo account cannot download the real files"},
+        404: {"description": "An id is unknown or has no stored PDF — nothing is returned partially"},
+    },
+)
+async def download_pdfs_zip(
+    ids: Annotated[list[int], Query(min_length=1, max_length=MAX_ZIP_PDFS)],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Bundles the stored invoice PDFs for the given facturen ids into one download (the UI's
+    "Download selected"). All-or-nothing: if any id is unknown or has no file the whole request
+    fails, because a silently incomplete archive is exactly the kind of thing that gets forwarded
+    to the accountant without anyone noticing."""
+    if current_user.is_demo:
+        raise HTTPException(status_code=403, detail="Demo accounts cannot download the real files")
+
+    unique_ids = list(dict.fromkeys(ids))
+    rows = (await db.execute(select(Factuur).where(Factuur.id.in_(unique_ids)))).scalars().all()
+    by_id = {row.id: row for row in rows}
+
+    problems = [i for i in unique_ids if i not in by_id or not by_id[i].pdf_url or not (UPLOADS_DIR / f"{i}.pdf").is_file()]
+    if problems:
+        raise HTTPException(status_code=404, detail=f"No stored PDF for factuur id(s): {problems}")
+
+    entries: list[tuple[str, Path]] = []
+    used: set[str] = set()
+    for i in unique_ids:
+        name = f"{_zip_filename(by_id[i].factuur)}.pdf"
+        if name in used:  # the same factuur number can have several rows (a corrected amount)
+            name = f"{_zip_filename(by_id[i].factuur)}-{i}.pdf"
+        used.add(name)
+        entries.append((name, UPLOADS_DIR / f"{i}.pdf"))
+
+    body = await run_in_threadpool(_build_zip, entries)
+    return Response(
+        content=body,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="invoices-{date.today().isoformat()}.zip"',
+            "Cache-Control": "private, no-store",
+        },
+    )
 
 
 @router.get("/revenue-by-week", response_model=list[RevenueByWeekOut])
